@@ -21,7 +21,7 @@
     /* Deep-space navy + a single warm "starlight" accent -- a palette
        actually tied to what this controls (a star/nebula projector),
        instead of the reflexive purple/cyan gradient pairing. */
-    --bg:#07080f; --panel:#12141f; --panel2:#1a1d2c;
+    --bg:#060810; --panel:#12141f; --panel2:#1a1d2c;
     --text:#eef0f6; --muted:#7d8296; --hair:#22263a;
     --accent:#e8b64a; --accent-ink:#241a05;
     --ok:#5fd08a; --err:#ff8a93;
@@ -30,23 +30,12 @@
     --ease-in-out:cubic-bezier(.77,0,.175,1);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; color:var(--text);
-    font-family:'National Park',-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;}
+  html,body{margin:0; min-height:100%; color:var(--text);
+    background-color:#060810; font-family:'National Park',-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;}
+  html{background-color:#060810;}
   body{
-    padding:max(20px,env(safe-area-inset-top)) 18px 44px; max-width:520px; margin:0 auto;
-    background-color:var(--bg);
-    /* a quiet, fixed starfield -- the one piece of decoration here, and
-       it's decoration that's actually about the product */
-    background-image:
-      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.5), transparent 60%),
-      radial-gradient(1px 1px at 68% 8%,  rgba(255,255,255,.35), transparent 60%),
-      radial-gradient(1.5px 1.5px at 85% 26%, rgba(255,255,255,.4), transparent 60%),
-      radial-gradient(1px 1px at 34% 42%, rgba(255,255,255,.3), transparent 60%),
-      radial-gradient(1px 1px at 8% 66%,  rgba(255,255,255,.4), transparent 60%),
-      radial-gradient(1.5px 1.5px at 92% 72%, rgba(255,255,255,.3), transparent 60%),
-      radial-gradient(1px 1px at 52% 88%, rgba(255,255,255,.3), transparent 60%);
-    background-size:100% 100%;
-    background-attachment:fixed;
+    padding:max(20px,env(safe-area-inset-top)) 18px 44px; min-height:100vh; max-width:520px; margin:0 auto;
+    background-color:#060810;
   }
   h1{font-size:26px; font-weight:700; margin:4px 0 2px; letter-spacing:-.02em;}
   .sub{color:var(--muted); font-size:14px; margin-bottom:22px;}
@@ -282,6 +271,8 @@ class TelinkMesh{
     });
     this.device.addEventListener('gattserverdisconnected',()=>{
       this.sessionKey=null;
+      powerOn=false;
+      syncPowerToggle();
       setStatus("Disconnected — tap Connect to reconnect.","");
       $("controls").classList.remove("ready");
     });
@@ -314,10 +305,35 @@ class TelinkMesh{
       this._onNotify(new Uint8Array(initial.buffer));
     }catch(e){ }
     await sleep(200);
+    await this._waitForDst(2000);
+    await this.queryStatus();
+    await sleep(300);
+    await this._readStatusNotification();
+    await sleep(300);
     await this.queryStatus();
     await sleep(700);
   }
+  async _waitForDst(timeout=2000){
+    if(this.dst!==0xFFFF) return;
+    const start=Date.now();
+    while(this.dst===0xFFFF && Date.now()-start<timeout){
+      await sleep(50);
+    }
+  }
+  async _readStatusNotification(){
+    try{
+      const value = await this.notifyCh.readValue();
+      this._onNotify(new Uint8Array(value.buffer));
+    }catch(e){ }
+  }
   queryStatus(){ return this._send(0xDA, new Uint8Array(0)); }
+  _parsePowerState(dec){
+    if(dec.length <= 10) return null;
+    for(let i=Math.min(dec.length,16)-1;i>=10;i--){
+      if(dec[i]===0||dec[i]===1) return dec[i]===1;
+    }
+    return null;
+  }
   _onNotify(pkt){
     if(!this.sessionKey||pkt.length<16) return;
     const ns=new Uint8Array(8); ns.set(this.macRev.subarray(0,3),0); ns.set(pkt.subarray(0,5),3);
@@ -327,10 +343,13 @@ class TelinkMesh{
     const op=dec[7], payload=dec[10];
     if(op===0xDC){
       if(payload!==0&&payload!==0xFF){ this.dst=payload; }
+      const state=this._parsePowerState(dec);
+      if(state!==null){ powerOn = state; syncPowerToggle(); }
     }
     if(op===0xDB){
-      if(payload===0||payload===1){ powerOn = payload===1; syncPowerToggle(); }
-      else if(payload!==0&&payload!==0xFF){ this.dst=payload; }
+      if(payload!==0&&payload!==0xFF){ this.dst=payload; }
+      const state=this._parsePowerState(dec);
+      if(state!==null){ powerOn = state; syncPowerToggle(); }
     }
     if(op===SUB_ONOFF){
       const onState = dec[10]===1;
@@ -465,6 +484,7 @@ $("connectBtn").onclick=async()=>{
     setStatus("Connecting…","");
     mesh=new TelinkMesh();
     await mesh.connect();
+    syncPowerToggle();
     setStatus("Connected ✓","on");
     $("controls").classList.add("ready");
   }catch(e){ setStatus(e.message||String(e),"err"); }

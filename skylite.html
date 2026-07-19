@@ -119,7 +119,9 @@
   #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
   #controls.ready{opacity:1; pointer-events:auto;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
-  .debug{display:none;}
+  .debug{display:none; margin-top:14px; padding:10px; border-radius:8px; background:var(--panel);
+    color:var(--muted); font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere;}
+  .debug.visible{display:block;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -340,6 +342,7 @@ class TelinkMesh{
     const stream=aesAtt(this.sessionKey,blk);
     const dec=new Uint8Array(pkt); for(let i=0;i<pkt.length-7;i++) dec[i+7]^=stream[i&15];
     const op=dec[7], payload=dec[10];
+    logStatusPacket(dec);
     if(op===0xDC){
       if(payload!==0&&payload!==0xFF){ this.dst=payload; }
     }
@@ -468,6 +471,16 @@ if(powerToggle){
 }
 
 function setStatus(t,cls){ const s=$("status"); s.textContent=t; s.className="status "+(cls||""); }
+function hex(bytes){ return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join(""); }
+function logStatusPacket(dec){
+  const box=$("debug");
+  if(!box) return;
+  box.classList.add("visible");
+  const line=`notify op=0x${dec[7].toString(16).padStart(2,"0")} data=${hex(dec.subarray(10))}`;
+  const lines=(box.textContent ? box.textContent.split("\n") : []);
+  if(lines[lines.length-1]!==line) lines.push(line);
+  box.textContent=lines.slice(-8).join("\n");
+}
 
 // Shows the byte values of the last command sent, for troubleshooting.
 window.onCommandSent=(cmdByte,data,pkt)=>{

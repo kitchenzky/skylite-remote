@@ -262,6 +262,7 @@ class TelinkMesh{
     this.combined=new Uint8Array(16); for(let i=0;i<16;i++)this.combined[i]=nm[i]^pw[i];
     this.seq=1+Math.floor(Math.random()*0xFFFFFE);
     this.dst=0xFFFF;               // broadcast until we learn the real address
+    this.powerStateKnown=false;
     this.sessionKey=null; this.device=null;
   }
   async connect(){
@@ -327,12 +328,18 @@ class TelinkMesh{
     }catch(e){ }
   }
   queryStatus(){ return this._send(0xDA, new Uint8Array(0)); }
-  _parsePowerState(dec){
-    if(dec.length <= 10) return null;
-    for(let i=Math.min(dec.length,16)-1;i>=10;i--){
-      if(dec[i]===0||dec[i]===1) return dec[i]===1;
-    }
-    return null;
+  _parseOnlinePowerState(dec){
+    // Telink online/status records begin with address, sequence, then state.
+    // Never scan the packet for 0/1: unused trailing bytes are zero-padded
+    // and made an already-on projector appear to be off after connecting.
+    if(dec.length <= 12) return null;
+    return dec[12] !== 0;
+  }
+  _setReportedPowerState(state){
+    if(state===null) return;
+    this.powerStateKnown=true;
+    powerOn=state;
+    syncPowerToggle();
   }
   _onNotify(pkt){
     if(!this.sessionKey||pkt.length<16) return;
@@ -343,18 +350,15 @@ class TelinkMesh{
     const op=dec[7], payload=dec[10];
     if(op===0xDC){
       if(payload!==0&&payload!==0xFF){ this.dst=payload; }
-      const state=this._parsePowerState(dec);
-      if(state!==null){ powerOn = state; syncPowerToggle(); }
+      this._setReportedPowerState(this._parseOnlinePowerState(dec));
     }
     if(op===0xDB){
       if(payload!==0&&payload!==0xFF){ this.dst=payload; }
-      const state=this._parsePowerState(dec);
-      if(state!==null){ powerOn = state; syncPowerToggle(); }
+      this._setReportedPowerState(this._parseOnlinePowerState(dec));
     }
     if(op===SUB_ONOFF){
       const onState = dec[10]===1;
-      powerOn = onState;
-      syncPowerToggle();
+      this._setReportedPowerState(onState);
     }
   }
   _build(cmd,data){

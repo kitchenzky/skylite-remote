@@ -399,7 +399,7 @@ function loadPresetState(){
   }catch(e){ return null; }
 }
 let powerOn = loadPowerState();
-let activePresetId = loadPresetState();
+let activePresetId = loadPresetState() ?? DEFAULT_PRESET_ID;
 function savePowerState(){
   try{ localStorage.setItem(POWER_STORAGE_KEY,powerOn?"on":"off"); }catch(e){ }
 }
@@ -434,9 +434,7 @@ function selectPreset(id, send=true){
   setPresetSelection(id);
   if(send) cmd(()=>mesh.loadScene(id));
 }
-function clearPreset(){
-  activePresetId = null;
-  savePresetState();
+function hidePresetSelection(){
   document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));
 }
 function activateTab(tabId){
@@ -447,6 +445,7 @@ function activateTab(tabId){
     panel.classList.toggle('active', panel.id===tabId);
   });
   if(tabId==='lightControlTab') sendColor();
+  if(tabId==='presetsTab') setPresetSelection(activePresetId);
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
   btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));
@@ -516,11 +515,11 @@ PRESETS.forEach(([id,label])=>{
   b.onclick=()=> selectPreset(id, true);
   $("presets").appendChild(b);
 });
-if(activePresetId!==null) setPresetSelection(activePresetId);
+setPresetSelection(activePresetId);
 
 // full-state color command (0x47) -- always sends every field
 function sendColor(){
-  clearPreset();  // going manual leaves preset mode
+  hidePresetSelection();  // custom mode hides, but remembers, the last preset
   cmd(()=>mesh.setColor(
     st.r?255:0, st.g?255:0, st.b?255:0,
     BRIGHT_VALUES[st.bright], st.laser?255:0, st.motor

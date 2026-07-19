@@ -376,8 +376,9 @@ class TelinkMesh{
   }
   setPower(on){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, on?1:0, 0x01)); }
   loadScene(id){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, id&0xff, 0x00)); }
-  // Color: 0x47 full control. bright is a LEVEL 1-3 (not 0-255), motor is 0/255.
-  setColor(r,g,b,bright,laser,motor){ return this._send(OUTER, Uint8Array.of(SUB_CONTROL,r,g,b,laser,motor,bright,0)); }
+  // This projector's observed 0x47 layout puts motor before laser.
+  // (The generic/decompiled field labels have these two bytes reversed.)
+  setColor(r,g,b,bright,laser,motor){ return this._send(OUTER, Uint8Array.of(SUB_CONTROL,r,g,b,motor,laser,bright,0)); }
   // Brightness: dedicated command 0x43, level 1=Low 2=Medium 3=High.
   setBrightness(level){ return this._send(OUTER, Uint8Array.of(SUB_BRIGHT, level&0xff)); }
   // Rotation: dedicated command 0x42, 0=off 255=on.
@@ -549,18 +550,18 @@ $("bright").addEventListener("input",()=>{
 });
 function sendBright(){
   clearPreset();
-  sendColor();
+  cmd(()=>mesh.setBrightness(st.bright));
 }
 $("bright").addEventListener("change",sendBright);
 
-// Rotation has its own command. Do not resend a full color packet here:
-// doing so overwrites the current scenery and can leave only laser dots.
+// Rotation is part of the projector's full manual-control packet. The
+// corrected field order keeps the selected colors and laser state intact.
 $("rotChip").onclick=()=>{
   st.motor = st.motor ? 0 : 255;
   $("rotChip").classList.toggle("active", !!st.motor);
   $("rotChip").textContent = st.motor ? "On" : "Off";
   clearPreset();
-  cmd(()=>mesh.setRotation(!!st.motor));
+  sendColor();
 };
 
 // --- Clean disconnect ---

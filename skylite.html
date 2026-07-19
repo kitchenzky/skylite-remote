@@ -424,8 +424,8 @@ function refreshManualUI(){
   $("rotChip").textContent = st.motor ? "On" : "Off";
 }
 function resetManualState(){
-  st.r=true; st.g=true; st.b=true; st.laser=false;
-  st.bright=3; st.motor=0;
+  st.r=true; st.g=true; st.b=true; st.laser=true;
+  st.bright=3; st.motor=255;
   refreshManualUI();
 }
 function setPresetSelection(id){
@@ -509,7 +509,7 @@ function cmd(fn){
 
 // Shared manual-control state. Hardware testing confirms that the full
 // control packet uses the same discrete brightness levels 1-3 as the UI.
-const st={r:true,g:true,b:true,laser:false, bright:3, motor:0};
+const st={r:true,g:true,b:true,laser:true, bright:3, motor:255};
 const BRIGHT_NAMES={1:"Low",2:"Middle",3:"High"};
 const BRIGHT_VALUES={1:1,2:2,3:3};
 

@@ -445,10 +445,6 @@ function clearPreset(){
   savePresetState();
   document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));
 }
-function ensureDefaultPreset(){
-  if(activePresetId===null) selectPreset(DEFAULT_PRESET_ID, true);
-  else setPresetSelection(activePresetId);
-}
 function activateTab(tabId){
   document.querySelectorAll('.tab-button').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.tab===tabId);
@@ -456,13 +452,6 @@ function activateTab(tabId){
   document.querySelectorAll('.tab-panel').forEach(panel=>{
     panel.classList.toggle('active', panel.id===tabId);
   });
-  if(tabId=== 'lightControlTab'){
-    clearPreset();
-    sendColor();
-  }
-  if(tabId=== 'presetsTab'){
-    ensureDefaultPreset();
-  }
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
   btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));
@@ -522,12 +511,11 @@ function cmd(fn){
   return cmdChain;
 }
 
-// Shared state. bright is a LEVEL 1-3; motor is 0/255. Colors/laser are
-// on/off. Every color command (0x47) carries the CURRENT bright+motor so
-// that toggling a color never resets rotation or brightness -- that
-// cross-reset was the bug where rotation stopped on any other change.
+// Shared manual-control state. The UI exposes three friendly brightness
+// steps, but command 0x47 requires an actual intensity byte (0-255).
 const st={r:true,g:true,b:true,laser:false, bright:3, motor:0};
 const BRIGHT_NAMES={1:"Low",2:"Medium",3:"High"};
+const BRIGHT_VALUES={1:85,2:170,3:255};
 
 // build preset buttons (single-select, with a check marker on the right)
 PRESETS.forEach(([id,label])=>{
@@ -544,7 +532,7 @@ function sendColor(){
   clearPreset();  // going manual leaves preset mode
   cmd(()=>mesh.setColor(
     st.r?255:0, st.g?255:0, st.b?255:0,
-    st.bright, st.laser?255:0, st.motor
+    BRIGHT_VALUES[st.bright], st.laser?255:0, st.motor
   ));
 }
 
@@ -561,18 +549,18 @@ $("bright").addEventListener("input",()=>{
 });
 function sendBright(){
   clearPreset();
-  cmd(()=>mesh.setBrightness(st.bright));
+  sendColor();
 }
 $("bright").addEventListener("change",sendBright);
-$("bright").addEventListener("touchend",sendBright);
 
-// --- Rotation: on/off toggle (dedicated 0x42 command) ---
+// Rotation has its own command. Do not resend a full color packet here:
+// doing so overwrites the current scenery and can leave only laser dots.
 $("rotChip").onclick=()=>{
   st.motor = st.motor ? 0 : 255;
   $("rotChip").classList.toggle("active", !!st.motor);
   $("rotChip").textContent = st.motor ? "On" : "Off";
   clearPreset();
-  sendColor();
+  cmd(()=>mesh.setRotation(!!st.motor));
 };
 
 // --- Clean disconnect ---

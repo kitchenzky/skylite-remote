@@ -446,7 +446,7 @@ function activateTab(tabId){
   document.querySelectorAll('.tab-panel').forEach(panel=>{
     panel.classList.toggle('active', panel.id===tabId);
   });
-  if(tabId==='lightControlTab') enterLightControl();
+  if(tabId==='lightControlTab') sendColor();
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
   btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));
@@ -525,18 +525,6 @@ function sendColor(){
     st.r?255:0, st.g?255:0, st.b?255:0,
     BRIGHT_VALUES[st.bright], st.laser?255:0, st.motor
   ));
-}
-function enterLightControl(){
-  clearPreset();
-  cmd(async()=>{
-    // Scene 0 explicitly exits automatic effects such as "RGB switch".
-    await mesh.loadScene(0);
-    await sleep(60);
-    await mesh.setColor(
-      st.r?255:0, st.g?255:0, st.b?255:0,
-      BRIGHT_VALUES[st.bright], st.laser?255:0, st.motor
-    );
-  });
 }
 
 // --- Colors: 3 independent on/off channels + laser ---

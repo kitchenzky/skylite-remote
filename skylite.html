@@ -452,6 +452,7 @@ function activateTab(tabId){
   document.querySelectorAll('.tab-panel').forEach(panel=>{
     panel.classList.toggle('active', panel.id===tabId);
   });
+  if(tabId==='lightControlTab') sendColor();
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
   btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));

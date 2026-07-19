@@ -389,13 +389,26 @@ let mesh=null;
 const $=id=>document.getElementById(id);
 const powerToggle=$("powerToggle");
 const POWER_STORAGE_KEY="skylite-power-state";
+const PRESET_STORAGE_KEY="skylite-active-preset";
 function loadPowerState(){
   try{ return localStorage.getItem(POWER_STORAGE_KEY)==="on"; }catch(e){ return false; }
 }
+function loadPresetState(){
+  try{
+    const id=Number(localStorage.getItem(PRESET_STORAGE_KEY));
+    return PRESETS.some(([presetId])=>presetId===id) ? id : null;
+  }catch(e){ return null; }
+}
 let powerOn = loadPowerState();
-let activePresetId = null;
+let activePresetId = loadPresetState();
 function savePowerState(){
   try{ localStorage.setItem(POWER_STORAGE_KEY,powerOn?"on":"off"); }catch(e){ }
+}
+function savePresetState(){
+  try{
+    if(activePresetId===null) localStorage.removeItem(PRESET_STORAGE_KEY);
+    else localStorage.setItem(PRESET_STORAGE_KEY,String(activePresetId));
+  }catch(e){ }
 }
 function syncPowerToggle(){
   if(powerToggle) powerToggle.checked = powerOn;
@@ -417,6 +430,7 @@ function resetManualState(){
 }
 function setPresetSelection(id){
   activePresetId = id;
+  savePresetState();
   document.querySelectorAll('#presets button').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.presetId===String(id));
   });
@@ -428,10 +442,12 @@ function selectPreset(id, send=true){
 }
 function clearPreset(){
   activePresetId = null;
+  savePresetState();
   document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));
 }
 function ensureDefaultPreset(){
-  selectPreset(DEFAULT_PRESET_ID, true);
+  if(activePresetId===null) selectPreset(DEFAULT_PRESET_ID, true);
+  else setPresetSelection(activePresetId);
 }
 function activateTab(tabId){
   document.querySelectorAll('.tab-button').forEach(btn=>{
@@ -521,6 +537,7 @@ PRESETS.forEach(([id,label])=>{
   b.onclick=()=> selectPreset(id, true);
   $("presets").appendChild(b);
 });
+if(activePresetId!==null) setPresetSelection(activePresetId);
 
 // full-state color command (0x47) -- always sends every field
 function sendColor(){

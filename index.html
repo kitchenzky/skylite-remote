@@ -60,8 +60,9 @@
     background:var(--panel2); color:var(--text); font-weight:700; cursor:pointer; transition:background .16s ease, border-color .16s ease;
   }
   .tab-button.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
-  .tab-panel{display:none;}
-  .tab-panel.active{display:block;}
+  .tab-panels{display:grid;}
+  .tab-panel{grid-area:1/1; visibility:hidden; opacity:0; pointer-events:none;}
+  .tab-panel.active{visibility:visible; opacity:1; pointer-events:auto;}
   .power{display:flex; justify-content:center; align-items:center; gap:10px;}
   .power button{flex:1; padding:18px 0; font-size:17px; font-weight:650; border-radius:12px; background:var(--panel2);}
   .power .on{background:var(--accent); color:var(--accent-ink);}
@@ -157,6 +158,7 @@
         <button class="tab-button active" data-tab="presetsTab">PRESETS</button>
         <button class="tab-button" data-tab="lightControlTab">LIGHT CONTROL</button>
       </div>
+      <div class="tab-panels">
       <div class="tab-panel active" id="presetsTab">
         <h2>Presets</h2>
         <div class="grid" id="presets"></div>
@@ -182,6 +184,7 @@
             <button class="chip wide" id="rotChip">Off</button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>

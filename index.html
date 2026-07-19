@@ -90,6 +90,7 @@
   .grid button:nth-child(6){animation-delay:175ms;}
   .grid button:nth-child(7){animation-delay:210ms;}
   .grid button:nth-child(8){animation-delay:245ms;}
+  .brightness-grid{grid-template-columns:repeat(3,1fr);}
   .chiprow{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:18px;}
   .chip{padding:10px 4px; border-radius:12px; background:var(--panel2); color:var(--text);
     font-size:13px; font-weight:600; border:1.5px solid var(--hair); text-align:center;
@@ -171,10 +172,7 @@
         </div>
         <div class="group">
           <h3>Brightness</h3>
-          <div class="slider" style="margin-bottom:0;">
-            <label>Level <span id="brightVal">High</span></label>
-            <input type="range" id="bright" min="1" max="3" step="1" value="3">
-          </div>
+          <div class="grid brightness-grid" id="brightnessOptions"></div>
         </div>
         <div class="group">
           <h3>Rotation</h3>
@@ -414,8 +412,9 @@ function refreshManualUI(){
     const ch=chip.dataset.ch;
     chip.classList.toggle('active', !!st[ch]);
   });
-  $("bright").value = st.bright;
-  $("brightVal").textContent = BRIGHT_NAMES[st.bright];
+  document.querySelectorAll('#brightnessOptions button').forEach(btn=>{
+    btn.classList.toggle('active', Number(btn.dataset.brightness)===st.bright);
+  });
   $("rotChip").classList.toggle('active', !!st.motor);
   $("rotChip").textContent = st.motor ? "On" : "Off";
 }
@@ -506,7 +505,7 @@ function cmd(fn){
 // Shared manual-control state. Hardware testing confirms that the full
 // control packet uses the same discrete brightness levels 1-3 as the UI.
 const st={r:true,g:true,b:true,laser:false, bright:3, motor:0};
-const BRIGHT_NAMES={1:"Low",2:"Medium",3:"High"};
+const BRIGHT_NAMES={1:"Low",2:"Middle",3:"High"};
 const BRIGHT_VALUES={1:1,2:2,3:3};
 
 // build preset buttons (single-select, with a check marker on the right)
@@ -535,14 +534,19 @@ document.querySelectorAll("#colorChips .chip").forEach(chip=>{
   chip.onclick=()=>{ st[ch]=!st[ch]; chip.classList.toggle("active",st[ch]); sendColor(); };
 });
 
-// --- Brightness: 3-step slider (dedicated 0x43 command) ---
-$("bright").addEventListener("input",()=>{
-  st.bright=+$("bright").value; $("brightVal").textContent=BRIGHT_NAMES[st.bright];
+// --- Brightness: three single-select buttons ---
+Object.entries(BRIGHT_NAMES).forEach(([value,label])=>{
+  const button=document.createElement("button");
+  button.dataset.brightness=value;
+  button.innerHTML=`<span>${label}</span><span class="check">✓</span>`;
+  button.onclick=()=>{
+    st.bright=Number(value);
+    refreshManualUI();
+    sendColor();
+  };
+  $("brightnessOptions").appendChild(button);
 });
-function sendBright(){
-  sendColor();
-}
-$("bright").addEventListener("change",sendBright);
+refreshManualUI();
 
 // This firmware ignores the nominal dedicated motor command, so rotation
 // is sent in the same complete state packet as the other manual controls.

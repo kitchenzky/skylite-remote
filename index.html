@@ -423,11 +423,6 @@ function refreshManualUI(){
   $("rotChip").classList.toggle('active', !!st.motor);
   $("rotChip").textContent = st.motor ? "On" : "Off";
 }
-function resetManualState(){
-  st.r=true; st.g=true; st.b=true; st.laser=true;
-  st.bright=3; st.motor=255;
-  refreshManualUI();
-}
 function setPresetSelection(id){
   activePresetId = id;
   savePresetState();
@@ -437,7 +432,6 @@ function setPresetSelection(id){
 }
 function selectPreset(id, send=true){
   setPresetSelection(id);
-  resetManualState();
   if(send) cmd(()=>mesh.loadScene(id));
 }
 function clearPreset(){

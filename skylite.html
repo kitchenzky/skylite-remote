@@ -445,7 +445,11 @@ function activateTab(tabId){
     panel.classList.toggle('active', panel.id===tabId);
   });
   if(tabId==='lightControlTab') sendColor();
-  if(tabId==='presetsTab') setPresetSelection(activePresetId);
+  if(tabId==='presetsTab'){
+    const presetId=activePresetId;
+    setPresetSelection(presetId);
+    cmd(()=>mesh.loadScene(presetId));
+  }
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
   btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));

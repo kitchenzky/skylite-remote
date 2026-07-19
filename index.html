@@ -96,11 +96,13 @@
     font-size:13px; font-weight:600; border:1.5px solid var(--hair); text-align:center;
     transition:background-color .16s var(--ease-out), border-color .16s var(--ease-out),
       color .16s var(--ease-out), transform .14s var(--ease-out), filter .14s var(--ease-out);}
-  .chip[data-ch="r"].active{background:#a5222f; border-color:#c4344a; color:#f5f6fa;}
-  .chip[data-ch="g"].active{background:#166a38; border-color:#238a4b; color:#f5f6fa;}
-  .chip[data-ch="b"].active{background:#1f4faa; border-color:#3566c8; color:#f5f6fa;}
   .chip.laser.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
   .chip.wide.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .color-label{display:flex; align-items:center; gap:8px;}
+  .color-dot{width:12px; height:12px; border-radius:50%; flex-shrink:0;}
+  .color-dot.red{background:#ef4455;}
+  .color-dot.green{background:#35b866;}
+  .color-dot.blue{background:#4c7bea;}
   .seg{display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1.5px solid var(--hair);
     border-radius:12px; overflow:hidden;}
   .seg button{padding:12px 4px; background:var(--panel2); color:var(--text); font-size:14px; font-weight:600;
@@ -163,11 +165,11 @@
         <h2>Light control</h2>
         <div class="group">
           <h3>Colors</h3>
-          <div class="chiprow" id="colorChips">
-            <button class="chip" data-ch="r">Red</button>
-            <button class="chip" data-ch="g">Green</button>
-            <button class="chip" data-ch="b">Blue</button>
-            <button class="chip laser" data-ch="laser">Laser dots</button>
+          <div class="grid" id="colorChips">
+            <button data-ch="r"><span class="color-label"><span class="color-dot red"></span>Red</span><span class="check">✓</span></button>
+            <button data-ch="g"><span class="color-label"><span class="color-dot green"></span>Green</span><span class="check">✓</span></button>
+            <button data-ch="b"><span class="color-label"><span class="color-dot blue"></span>Blue</span><span class="check">✓</span></button>
+            <button data-ch="laser"><span>Laser dots</span><span class="check">✓</span></button>
           </div>
         </div>
         <div class="group">
@@ -408,7 +410,7 @@ function syncPowerToggle(){
   if(powerToggle) powerToggle.checked = powerOn;
 }
 function refreshManualUI(){
-  document.querySelectorAll('#colorChips .chip').forEach(chip=>{
+  document.querySelectorAll('#colorChips button').forEach(chip=>{
     const ch=chip.dataset.ch;
     chip.classList.toggle('active', !!st[ch]);
   });
@@ -528,7 +530,7 @@ function sendColor(){
 }
 
 // --- Colors: 3 independent on/off channels + laser ---
-document.querySelectorAll("#colorChips .chip").forEach(chip=>{
+document.querySelectorAll("#colorChips button").forEach(chip=>{
   const ch=chip.dataset.ch;
   chip.classList.toggle("active",st[ch]);
   chip.onclick=()=>{ st[ch]=!st[ch]; chip.classList.toggle("active",st[ch]); sendColor(); };

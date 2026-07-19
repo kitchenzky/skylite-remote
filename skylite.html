@@ -119,7 +119,9 @@
   #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
   #controls.ready{opacity:1; pointer-events:auto;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
-  .debug{display:none;}
+  .debug{display:none; margin-top:14px; padding:10px; border-radius:8px; background:var(--panel);
+    color:var(--muted); font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere;}
+  .debug.visible{display:block;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -474,16 +476,22 @@ if(powerToggle){
 }
 
 function setStatus(t,cls){ const s=$("status"); s.textContent=t; s.className="status "+(cls||""); }
+const DEBUG_MODE=new URLSearchParams(location.search).get("debug")==="1";
+if(DEBUG_MODE){
+  $("debug").classList.add("visible");
+  $("debug").textContent="Light Control debug enabled";
+}
 
 // Shows the byte values of the last command sent, for troubleshooting.
 window.onCommandSent=(cmdByte,data,pkt)=>{
-  if(cmdByte!==OUTER) return;
+  if(cmdByte!==OUTER||!DEBUG_MODE) return;
   const sub=data[0];
-  let msg="";
-  if(sub===SUB_CONTROL) msg=`color: R=${data[1]?1:0} G=${data[2]?1:0} B=${data[3]?1:0} laser=${data[4]?1:0}`;
-  else if(sub===SUB_BRIGHT) msg=`brightness level = ${data[1]}`;
-  else if(sub===SUB_MOTOR) msg=`rotation = ${data[1]?"on":"off"}`;
-  if(msg) $("debug").textContent="sent → "+msg;
+  const name=sub===SUB_CONTROL?"full":sub===SUB_BRIGHT?"brightness":sub===SUB_MOTOR?"rotation":"other";
+  const bytes=Array.from(data,b=>b.toString(16).padStart(2,"0")).join(" ");
+  const line=`${name} → ${bytes} | UI bright=${st.bright} rotation=${st.motor?"on":"off"} laser=${st.laser?"on":"off"}`;
+  const lines=$("debug").textContent.split("\n");
+  lines.push(line);
+  $("debug").textContent=lines.slice(-10).join("\n");
 };
 
 $("connectBtn").onclick=async()=>{

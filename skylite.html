@@ -251,8 +251,7 @@ const CH_PAIR="00010203-0405-0607-0809-0a0b0c0d1914";
 const MESH_NAME="telink_mesh0", MESH_PW="123";
 const REAL_MAC="A4C1385A60D1";                    // this light's hardware MAC
 const VENDOR=0x0211;
-// Hardware-observed mapping: 0x42 is brightness and 0x43 is motor/rotation.
-const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47, SUB_BRIGHT=0x42, SUB_MOTOR=0x43;
+const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47;
 const DEFAULT_PRESET_ID=1;
 const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
                [6,"Space"],[8,"Sunrise"],[2,"Fading"],[9,"RGB switch"]];
@@ -381,10 +380,6 @@ class TelinkMesh{
   loadScene(id){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, id&0xff, 0x00)); }
   // Full manual control: colors, laser dots, rotation, and brightness.
   setColor(r,g,b,bright,laser,motor){ return this._send(OUTER, Uint8Array.of(SUB_CONTROL,r,g,b,laser,motor,bright,0)); }
-  // Brightness: dedicated command 0x43, level 1=Low 2=Medium 3=High.
-  setBrightness(level){ return this._send(OUTER, Uint8Array.of(SUB_BRIGHT, level&0xff)); }
-  // Rotation: dedicated command 0x42, 0=off 255=on.
-  setRotation(on){ return this._send(OUTER, Uint8Array.of(SUB_MOTOR, on?255:0)); }
 }
 
 /* ============================ UI wiring ============================ */
@@ -486,7 +481,7 @@ if(DEBUG_MODE){
 window.onCommandSent=(cmdByte,data,pkt)=>{
   if(cmdByte!==OUTER||!DEBUG_MODE) return;
   const sub=data[0];
-  const name=sub===SUB_CONTROL?"full":sub===SUB_BRIGHT?"brightness":sub===SUB_MOTOR?"rotation":"other";
+  const name=sub===SUB_CONTROL?"full":"other";
   const bytes=Array.from(data,b=>b.toString(16).padStart(2,"0")).join(" ");
   const line=`${name} → ${bytes} | UI bright=${st.bright} rotation=${st.motor?"on":"off"} laser=${st.laser?"on":"off"}`;
   const lines=$("debug").textContent.split("\n");
@@ -520,10 +515,11 @@ function cmd(fn){
   return cmdChain;
 }
 
-// Shared manual-control state. This projector uses brightness levels 1-3
-// in both the dedicated brightness command and the full control packet.
+// Shared manual-control state. The UI has three steps; the projector's
+// full control packet expects brightness as a percentage (0-100).
 const st={r:true,g:true,b:true,laser:false, bright:3, motor:0};
 const BRIGHT_NAMES={1:"Low",2:"Medium",3:"High"};
+const BRIGHT_VALUES={1:25,2:60,3:100};
 
 // build preset buttons (single-select, with a check marker on the right)
 PRESETS.forEach(([id,label])=>{
@@ -540,7 +536,7 @@ function sendColor(){
   clearPreset();  // going manual leaves preset mode
   cmd(()=>mesh.setColor(
     st.r?255:0, st.g?255:0, st.b?255:0,
-    st.bright, st.laser?255:0, st.motor
+    BRIGHT_VALUES[st.bright], st.laser?255:0, st.motor
   ));
 }
 
@@ -556,18 +552,17 @@ $("bright").addEventListener("input",()=>{
   st.bright=+$("bright").value; $("brightVal").textContent=BRIGHT_NAMES[st.bright];
 });
 function sendBright(){
-  clearPreset();
-  cmd(()=>mesh.setBrightness(st.bright));
+  sendColor();
 }
 $("bright").addEventListener("change",sendBright);
 
-// Rotation has a dedicated command and must not replay color/brightness.
+// This firmware ignores the nominal dedicated motor command, so rotation
+// is sent in the same complete state packet as the other manual controls.
 $("rotChip").onclick=()=>{
   st.motor = st.motor ? 0 : 255;
   $("rotChip").classList.toggle("active", !!st.motor);
   $("rotChip").textContent = st.motor ? "On" : "Off";
-  clearPreset();
-  cmd(()=>mesh.setRotation(!!st.motor));
+  sendColor();
 };
 
 // --- Clean disconnect ---

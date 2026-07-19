@@ -119,9 +119,7 @@
   #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
   #controls.ready{opacity:1; pointer-events:auto;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
-  .debug{display:none; margin-top:14px; padding:10px; border-radius:8px; background:var(--panel);
-    color:var(--muted); font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere;}
-  .debug.visible{display:block;}
+  .debug{display:none;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -274,8 +272,6 @@ class TelinkMesh{
     });
     this.device.addEventListener('gattserverdisconnected',()=>{
       this.sessionKey=null;
-      powerOn=false;
-      syncPowerToggle();
       setStatus("Disconnected — tap Connect to reconnect.","");
       $("controls").classList.remove("ready");
     });
@@ -330,17 +326,11 @@ class TelinkMesh{
     }catch(e){ }
   }
   queryStatus(){ return this._send(0xDA, new Uint8Array(0)); }
-  _parseOnlinePowerState(dec){
-    // Telink online/status records begin with address, sequence, then state.
-    // Never scan the packet for 0/1: unused trailing bytes are zero-padded
-    // and made an already-on projector appear to be off after connecting.
-    if(dec.length <= 12) return null;
-    return dec[12] !== 0;
-  }
   _setReportedPowerState(state){
     if(state===null) return;
     this.powerStateKnown=true;
     powerOn=state;
+    savePowerState();
     syncPowerToggle();
   }
   _onNotify(pkt){
@@ -350,14 +340,11 @@ class TelinkMesh{
     const stream=aesAtt(this.sessionKey,blk);
     const dec=new Uint8Array(pkt); for(let i=0;i<pkt.length-7;i++) dec[i+7]^=stream[i&15];
     const op=dec[7], payload=dec[10];
-    logStatusPacket(dec);
     if(op===0xDC){
       if(payload!==0&&payload!==0xFF){ this.dst=payload; }
-      this._setReportedPowerState(this._parseOnlinePowerState(dec));
     }
     if(op===0xDB){
       if(payload!==0&&payload!==0xFF){ this.dst=payload; }
-      this._setReportedPowerState(this._parseOnlinePowerState(dec));
     }
     if(op===SUB_ONOFF){
       const onState = dec[10]===1;
@@ -401,8 +388,15 @@ class TelinkMesh{
 let mesh=null;
 const $=id=>document.getElementById(id);
 const powerToggle=$("powerToggle");
-let powerOn = false;
+const POWER_STORAGE_KEY="skylite-power-state";
+function loadPowerState(){
+  try{ return localStorage.getItem(POWER_STORAGE_KEY)==="on"; }catch(e){ return false; }
+}
+let powerOn = loadPowerState();
 let activePresetId = null;
+function savePowerState(){
+  try{ localStorage.setItem(POWER_STORAGE_KEY,powerOn?"on":"off"); }catch(e){ }
+}
 function syncPowerToggle(){
   if(powerToggle) powerToggle.checked = powerOn;
 }
@@ -463,6 +457,7 @@ if(powerToggle){
     cmd(async ()=>{
       await mesh.setPower(next);
       powerOn = next;
+      savePowerState();
       syncPowerToggle();
       if(next){
         selectPreset(DEFAULT_PRESET_ID, false);
@@ -473,16 +468,6 @@ if(powerToggle){
 }
 
 function setStatus(t,cls){ const s=$("status"); s.textContent=t; s.className="status "+(cls||""); }
-function hex(bytes){ return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join(""); }
-function logStatusPacket(dec){
-  const box=$("debug");
-  if(!box) return;
-  box.classList.add("visible");
-  const line=`notify op=0x${dec[7].toString(16).padStart(2,"0")} data=${hex(dec.subarray(10))}`;
-  const lines=(box.textContent ? box.textContent.split("\n") : []);
-  if(lines[lines.length-1]!==line) lines.push(line);
-  box.textContent=lines.slice(-6).join("\n");
-}
 
 // Shows the byte values of the last command sent, for troubleshooting.
 window.onCommandSent=(cmdByte,data,pkt)=>{

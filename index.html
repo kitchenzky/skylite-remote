@@ -376,9 +376,8 @@ class TelinkMesh{
   }
   setPower(on){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, on?1:0, 0x01)); }
   loadScene(id){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, id&0xff, 0x00)); }
-  // This projector's observed 0x47 layout puts motor before laser.
-  // (The generic/decompiled field labels have these two bytes reversed.)
-  setColor(r,g,b,bright,laser,motor){ return this._send(OUTER, Uint8Array.of(SUB_CONTROL,r,g,b,motor,laser,bright,0)); }
+  // Full manual control: colors, laser dots, rotation, and brightness.
+  setColor(r,g,b,bright,laser,motor){ return this._send(OUTER, Uint8Array.of(SUB_CONTROL,r,g,b,laser,motor,bright,0)); }
   // Brightness: dedicated command 0x43, level 1=Low 2=Medium 3=High.
   setBrightness(level){ return this._send(OUTER, Uint8Array.of(SUB_BRIGHT, level&0xff)); }
   // Rotation: dedicated command 0x42, 0=off 255=on.

@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sky Lite Remote</title>
+<title>Kitchenzky Sky Remote</title>
 <meta name="description" content="Direct Bluetooth control for BlissLights Sky Lite 2.0 -- no app required.">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=National+Park:wght@400;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#07080f">
 <!-- iOS home-screen / PWA-like launch (Bluefy: open URL, Add to Home Screen) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Sky Lite">
+<meta name="apple-mobile-web-app-title" content="Kitchenzky Sky Remote">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
@@ -28,7 +31,7 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;}
+    font-family:'National Park',-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;}
   body{
     padding:max(20px,env(safe-area-inset-top)) 18px 44px; max-width:520px; margin:0 auto;
     background-color:var(--bg);
@@ -50,18 +53,36 @@
   button{font-family:inherit; cursor:pointer; border:none; color:var(--text);
     transition:transform .14s var(--ease-out), filter .14s var(--ease-out), opacity .14s var(--ease-out);}
   button:active{transform:scale(.97); filter:brightness(.92);}
-  .connect{width:100%; padding:16px; font-size:16px; font-weight:650; border-radius:14px;
-    background:var(--accent); color:var(--accent-ink); margin-bottom:10px;}
+  .connect{width:62px; height:62px; padding:0; font-size:0; font-weight:700; border-radius:999px;
+    background:var(--accent); color:var(--accent-ink); margin:0 auto 10px; display:block;
+    align-items:center; justify-content:center; transition:transform .16s ease, opacity .16s ease;}
+  .connect:hover{opacity:.95; transform:scale(1.03);}
+  .connect svg{width:28px; height:28px; fill:currentColor;}
   .status{font-size:13px; color:var(--muted); text-align:center; min-height:18px; margin-bottom:20px;}
-  .status.on{color:var(--ok);}
+  .status.on{color:var(--accent);}
   .status.err{color:var(--err);}
   .card{background:var(--panel); border:1px solid var(--hair); border-radius:16px; padding:18px; margin-bottom:12px;}
   .card h2{font-size:12px; font-weight:650; color:var(--muted); text-transform:uppercase;
     letter-spacing:.08em; margin:0 0 14px;}
-  .power{display:flex; gap:10px;}
+  .card h3{font-size:14px; font-weight:700; margin:0 0 10px; color:var(--text);}
+  .card .group{margin-top:18px;}
+  .tabs{display:flex; gap:8px; margin-bottom:18px;}
+  .tab-button{flex:1; padding:12px 14px; border-radius:12px; border:1.5px solid var(--hair);
+    background:var(--panel2); color:var(--text); font-weight:700; cursor:pointer; transition:background .16s ease, border-color .16s ease;
+  }
+  .tab-button.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  .power{display:flex; justify-content:center; align-items:center; gap:10px;}
   .power button{flex:1; padding:18px 0; font-size:17px; font-weight:650; border-radius:12px; background:var(--panel2);}
   .power .on{background:var(--accent); color:var(--accent-ink);}
   .power .off{background:var(--panel2); color:var(--text);}
+  .toggle-switch{display:inline-block;position:relative;width:100px;height:50px;--light:rgba(255,255,255,.35);--dark:var(--panel2);}
+  .toggle-switch .checkbox{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;z-index:2;}
+  .toggle-switch .slider{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:25px;background-color:var(--dark);border:3px solid var(--dark);transition:0.3s;z-index:1;pointer-events:none;}
+  .toggle-switch .checkbox:checked + .slider{background-color:var(--light);}
+  .toggle-switch .slider::before{content:"";position:absolute;top:50%;left:10px;width:25px;height:25px;border-radius:50%;box-shadow:inset 12px -4px 0px 0px var(--light);background-color:var(--dark);transform:translateY(-50%);transition:0.3s;}
+  .toggle-switch .checkbox:checked + .slider::before{transform:translate(50px,-50%);box-shadow:none;}
   .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:9px;}
   .grid button{display:flex; align-items:center; justify-content:space-between; gap:8px;
     padding:14px 14px; border-radius:12px; background:var(--panel2); font-size:14px; font-weight:600;
@@ -109,7 +130,7 @@
   #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
   #controls.ready{opacity:1; pointer-events:auto;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
-  .debug{font-size:11px; color:var(--muted); text-align:center; margin-top:10px; font-family:ui-monospace,Menlo,monospace; word-break:break-all; opacity:.8;}
+  .debug{display:none;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -118,53 +139,64 @@
 </style>
 </head>
 <body>
-  <h1>Sky Lite Remote</h1>
+  <h1>Kitchenzky Sky Remote</h1>
   <div class="sub">Let there be light!</div>
 
-  <button class="connect" id="connectBtn">Connect to light</button>
+  <button class="connect" id="connectBtn" aria-label="Connect to light">
+    <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+      <path d="M512 981.333333c-8.533333 0-12.8 0-21.333333-4.266666-12.8-8.533333-21.333333-21.333333-21.333334-38.4v-332.8l-209.066666 174.933333c-17.066667 17.066667-46.933333 12.8-59.733334-4.266667-17.066667-17.066667-12.8-46.933333 4.266667-59.733333l238.933333-200.533333-234.666666-204.8c-17.066667-17.066667-21.333333-42.666667-4.266667-59.733334 17.066667-17.066667 42.666667-21.333333 59.733333-4.266666l204.8 170.666666V85.333333c0-17.066667 8.533333-29.866667 21.333334-38.4 12.8-8.533333 29.866667-4.266667 42.666666 4.266667L810.666667 243.2c12.8 8.533333 17.066667 21.333333 17.066666 34.133333 0 12.8-4.266667 25.6-17.066666 34.133334L576 512l238.933333 200.533333c8.533333 8.533333 17.066667 21.333333 17.066667 34.133334 0 12.8-8.533333 25.6-17.066667 34.133333l-277.333333 192c-8.533333 4.266667-17.066667 8.533333-25.6 8.533333z m42.666667-375.466666v251.733333l166.4-115.2-166.4-136.533333z m0-439.466667v251.733333l166.4-140.8L554.666667 166.4z"/>
+    </svg>
+  </button>
   <div class="status" id="status">Tap Connect, then pick "BlissLights".</div>
 
   <div id="controls">
     <div class="card">
       <h2>Power</h2>
       <div class="power">
-        <button class="on"  onclick="cmd(()=>mesh.setPower(true))">On</button>
-        <button class="off" onclick="cmd(()=>mesh.setPower(false))">Off</button>
+        <label class="toggle-switch">
+          <input type="checkbox" id="powerToggle" class="checkbox">
+          <span class="slider"></span>
+        </label>
       </div>
     </div>
 
     <div class="card">
-      <h2>Presets</h2>
-      <div class="grid" id="presets"></div>
-    </div>
-
-    <div class="card">
-      <h2>Colors</h2>
-      <div class="chiprow" id="colorChips">
-        <button class="chip" data-ch="r">Red</button>
-        <button class="chip" data-ch="g">Green</button>
-        <button class="chip" data-ch="b">Blue</button>
-        <button class="chip laser" data-ch="laser">Laser dots</button>
+      <div class="tabs">
+        <button class="tab-button active" data-tab="presetsTab">PRESETS</button>
+        <button class="tab-button" data-tab="lightControlTab">LIGHT CONTROL</button>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Brightness</h2>
-      <div class="slider" style="margin-bottom:0;">
-        <label>Level <span id="brightVal">High</span></label>
-        <input type="range" id="bright" min="1" max="3" step="1" value="3">
+      <div class="tab-panel active" id="presetsTab">
+        <h2>Presets</h2>
+        <div class="grid" id="presets"></div>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Rotation</h2>
-      <div class="chiprow" style="grid-template-columns:1fr;">
-        <button class="chip wide" id="rotChip">Off</button>
+      <div class="tab-panel" id="lightControlTab">
+        <h2>Light control</h2>
+        <div class="group">
+          <h3>Colors</h3>
+          <div class="chiprow" id="colorChips">
+            <button class="chip" data-ch="r">Red</button>
+            <button class="chip" data-ch="g">Green</button>
+            <button class="chip" data-ch="b">Blue</button>
+            <button class="chip laser" data-ch="laser">Laser dots</button>
+          </div>
+        </div>
+        <div class="group">
+          <h3>Brightness</h3>
+          <div class="slider" style="margin-bottom:0;">
+            <label>Level <span id="brightVal">High</span></label>
+            <input type="range" id="bright" min="1" max="3" step="1" value="3">
+          </div>
+        </div>
+        <div class="group">
+          <h3>Rotation</h3>
+          <div class="chiprow" style="grid-template-columns:1fr;">
+            <button class="chip wide" id="rotChip">Off</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="hint">Tool by Kitchenzky</div>
   <div class="debug" id="debug"></div>
 
 <script>
@@ -229,8 +261,9 @@ const MESH_NAME="telink_mesh0", MESH_PW="123";
 const REAL_MAC="A4C1385A60D1";                    // this light's hardware MAC
 const VENDOR=0x0211;
 const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47, SUB_MOTOR=0x42, SUB_BRIGHT=0x43;
-const PRESETS=[[1,"Stars + nebula"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
-               [6,"Space"],[2,"Fading"],[8,"Sunrise"],[9,"RGB auto"]];
+const DEFAULT_PRESET_ID=1;
+const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
+               [6,"Space"],[8,"Sunrise"],[2,"Fading"],[9,"RGB switch"]];
 
 /* ============================ Mesh class ============================ */
 class TelinkMesh{
@@ -244,7 +277,8 @@ class TelinkMesh{
   }
   async connect(){
     this.device=await navigator.bluetooth.requestDevice({
-      acceptAllDevices:true, optionalServices:[SERVICE]
+      acceptAllDevices:true,
+      optionalServices:[SERVICE]
     });
     this.device.addEventListener('gattserverdisconnected',()=>{
       this.sessionKey=null;
@@ -275,16 +309,34 @@ class TelinkMesh{
     await this.notifyCh.startNotifications();
     this.notifyCh.addEventListener('characteristicvaluechanged',e=>this._onNotify(new Uint8Array(e.target.value.buffer)));
     await this.notifyCh.writeValue(Uint8Array.of(0x01));
-    await sleep(900);
+    try{
+      const initial = await this.notifyCh.readValue();
+      this._onNotify(new Uint8Array(initial.buffer));
+    }catch(e){ }
+    await sleep(200);
+    await this.queryStatus();
+    await sleep(700);
   }
+  queryStatus(){ return this._send(0xDA, new Uint8Array(0)); }
   _onNotify(pkt){
     if(!this.sessionKey||pkt.length<16) return;
     const ns=new Uint8Array(8); ns.set(this.macRev.subarray(0,3),0); ns.set(pkt.subarray(0,5),3);
     const blk=new Uint8Array(16); blk.set(ns,1);
     const stream=aesAtt(this.sessionKey,blk);
     const dec=new Uint8Array(pkt); for(let i=0;i<pkt.length-7;i++) dec[i+7]^=stream[i&15];
-    const op=dec[7], addr=dec[10];
-    if((op===0xDC||op===0xDB)&&addr!==0&&addr!==0xFF){ this.dst=addr; }
+    const op=dec[7], payload=dec[10];
+    if(op===0xDC){
+      if(payload!==0&&payload!==0xFF){ this.dst=payload; }
+    }
+    if(op===0xDB){
+      if(payload===0||payload===1){ powerOn = payload===1; syncPowerToggle(); }
+      else if(payload!==0&&payload!==0xFF){ this.dst=payload; }
+    }
+    if(op===SUB_ONOFF){
+      const onState = dec[10]===1;
+      powerOn = onState;
+      syncPowerToggle();
+    }
   }
   _build(cmd,data){
     const p=new Uint8Array(20);
@@ -322,6 +374,78 @@ class TelinkMesh{
 /* ============================ UI wiring ============================ */
 let mesh=null;
 const $=id=>document.getElementById(id);
+const powerToggle=$("powerToggle");
+let powerOn = false;
+let activePresetId = null;
+function syncPowerToggle(){
+  if(powerToggle) powerToggle.checked = powerOn;
+}
+function refreshManualUI(){
+  document.querySelectorAll('#colorChips .chip').forEach(chip=>{
+    const ch=chip.dataset.ch;
+    chip.classList.toggle('active', !!st[ch]);
+  });
+  $("bright").value = st.bright;
+  $("brightVal").textContent = BRIGHT_NAMES[st.bright];
+  $("rotChip").classList.toggle('active', !!st.motor);
+  $("rotChip").textContent = st.motor ? "On" : "Off";
+}
+function resetManualState(){
+  st.r=true; st.g=true; st.b=true; st.laser=false;
+  st.bright=3; st.motor=0;
+  refreshManualUI();
+}
+function setPresetSelection(id){
+  activePresetId = id;
+  document.querySelectorAll('#presets button').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.presetId===String(id));
+  });
+}
+function selectPreset(id, send=true){
+  setPresetSelection(id);
+  resetManualState();
+  if(send) cmd(()=>mesh.loadScene(id));
+}
+function clearPreset(){
+  activePresetId = null;
+  document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));
+}
+function ensureDefaultPreset(){
+  selectPreset(DEFAULT_PRESET_ID, true);
+}
+function activateTab(tabId){
+  document.querySelectorAll('.tab-button').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.tab===tabId);
+  });
+  document.querySelectorAll('.tab-panel').forEach(panel=>{
+    panel.classList.toggle('active', panel.id===tabId);
+  });
+  if(tabId=== 'lightControlTab'){
+    clearPreset();
+    sendColor();
+  }
+  if(tabId=== 'presetsTab'){
+    ensureDefaultPreset();
+  }
+}
+document.querySelectorAll('.tab-button').forEach(btn=>{
+  btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));
+});
+if(powerToggle){
+  powerToggle.addEventListener("change", ()=>{
+    const next = powerToggle.checked;
+    cmd(async ()=>{
+      await mesh.setPower(next);
+      powerOn = next;
+      syncPowerToggle();
+      if(next){
+        selectPreset(DEFAULT_PRESET_ID, false);
+        await mesh.loadScene(DEFAULT_PRESET_ID);
+      }
+    });
+  });
+}
+
 function setStatus(t,cls){ const s=$("status"); s.textContent=t; s.className="status "+(cls||""); }
 
 // Shows the byte values of the last command sent, for troubleshooting.
@@ -367,16 +491,12 @@ function cmd(fn){
 const st={r:true,g:true,b:true,laser:false, bright:3, motor:0};
 const BRIGHT_NAMES={1:"Low",2:"Medium",3:"High"};
 
-function clearPreset(){ document.querySelectorAll("#presets button").forEach(x=>x.classList.remove("active")); }
-
 // build preset buttons (single-select, with a check marker on the right)
 PRESETS.forEach(([id,label])=>{
-  const b=document.createElement("button");
+  const b=document.createElement('button');
+  b.dataset.presetId = id;
   b.innerHTML=`<span>${label}</span><span class="check">✓</span>`;
-  b.onclick=()=>{
-    document.querySelectorAll("#presets button").forEach(x=>x.classList.toggle("active",x===b));
-    cmd(()=>mesh.loadScene(id));
-  };
+  b.onclick=()=> selectPreset(id, true);
   $("presets").appendChild(b);
 });
 
@@ -400,7 +520,10 @@ document.querySelectorAll("#colorChips .chip").forEach(chip=>{
 $("bright").addEventListener("input",()=>{
   st.bright=+$("bright").value; $("brightVal").textContent=BRIGHT_NAMES[st.bright];
 });
-function sendBright(){ cmd(()=>mesh.setBrightness(st.bright)); }
+function sendBright(){
+  clearPreset();
+  cmd(()=>mesh.setBrightness(st.bright));
+}
 $("bright").addEventListener("change",sendBright);
 $("bright").addEventListener("touchend",sendBright);
 
@@ -409,7 +532,8 @@ $("rotChip").onclick=()=>{
   st.motor = st.motor ? 0 : 255;
   $("rotChip").classList.toggle("active", !!st.motor);
   $("rotChip").textContent = st.motor ? "On" : "Off";
-  cmd(()=>mesh.setRotation(!!st.motor));
+  clearPreset();
+  sendColor();
 };
 
 // --- Clean disconnect ---

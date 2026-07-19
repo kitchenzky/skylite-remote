@@ -119,11 +119,7 @@
   #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
   #controls.ready{opacity:1; pointer-events:auto;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
-  .debug{display:none; margin-top:14px; padding:10px; border-radius:8px; background:var(--panel);
-    color:var(--muted); font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere;}
-  .debug.visible{display:block;}
-  .debug-tools{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; white-space:normal;}
-  .debug-tools button{padding:7px 9px; border-radius:7px; background:var(--panel2); border:1px solid var(--hair); font-size:11px;}
+  .debug{display:none;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -473,29 +469,12 @@ if(powerToggle){
 }
 
 function setStatus(t,cls){ const s=$("status"); s.textContent=t; s.className="status "+(cls||""); }
-const DEBUG_MODE=new URLSearchParams(location.search).get("debug")==="1";
-if(DEBUG_MODE){
-  $("debug").classList.add("visible");
-  $("debug").innerHTML='<div>Raw brightness test (fixed white, rotation off, laser off):</div><div class="debug-tools" id="debugTools"></div><div id="debugLog">Light Control debug enabled</div>';
-  [0,1,3,10,25,50,100,255].forEach(value=>{
-    const button=document.createElement("button");
-    button.textContent=String(value);
-    button.onclick=()=>cmd(()=>mesh.setColor(255,255,255,value,0,0));
-    $("debugTools").appendChild(button);
-  });
-}
 
 // Shows the byte values of the last command sent, for troubleshooting.
 window.onCommandSent=(cmdByte,data,pkt)=>{
-  if(cmdByte!==OUTER||!DEBUG_MODE) return;
+  if(cmdByte!==OUTER) return;
   const sub=data[0];
-  const name=sub===SUB_CONTROL?"full":"other";
-  const bytes=Array.from(data,b=>b.toString(16).padStart(2,"0")).join(" ");
-  const line=`${name} → ${bytes} | UI bright=${st.bright} rotation=${st.motor?"on":"off"} laser=${st.laser?"on":"off"}`;
-  const log=$("debugLog");
-  const lines=log.textContent.split("\n");
-  lines.push(line);
-  log.textContent=lines.slice(-10).join("\n");
+  if(sub===SUB_CONTROL) $("debug").textContent="manual controls sent";
 };
 
 $("connectBtn").onclick=async()=>{

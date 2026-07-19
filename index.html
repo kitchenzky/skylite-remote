@@ -249,7 +249,8 @@ const CH_PAIR="00010203-0405-0607-0809-0a0b0c0d1914";
 const MESH_NAME="telink_mesh0", MESH_PW="123";
 const REAL_MAC="A4C1385A60D1";                    // this light's hardware MAC
 const VENDOR=0x0211;
-const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47, SUB_MOTOR=0x42, SUB_BRIGHT=0x43;
+// Hardware-observed mapping: 0x42 is brightness and 0x43 is motor/rotation.
+const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47, SUB_BRIGHT=0x42, SUB_MOTOR=0x43;
 const DEFAULT_PRESET_ID=1;
 const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
                [6,"Space"],[8,"Sunrise"],[2,"Fading"],[9,"RGB switch"]];
@@ -552,14 +553,13 @@ function sendBright(){
 }
 $("bright").addEventListener("change",sendBright);
 
-// Rotation is part of the projector's full manual-control packet. The
-// corrected field order keeps the selected colors and laser state intact.
+// Rotation has a dedicated command and must not replay color/brightness.
 $("rotChip").onclick=()=>{
   st.motor = st.motor ? 0 : 255;
   $("rotChip").classList.toggle("active", !!st.motor);
   $("rotChip").textContent = st.motor ? "On" : "Off";
   clearPreset();
-  sendColor();
+  cmd(()=>mesh.setRotation(!!st.motor));
 };
 
 // --- Clean disconnect ---

@@ -1,0 +1,13 @@
+{
+  "name": "Sky Lite Remote",
+  "short_name": "Sky Lite",
+  "description": "Direct Bluetooth control for BlissLights Sky Lite 2.0 -- no app required.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#07080f",
+  "theme_color": "#07080f",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

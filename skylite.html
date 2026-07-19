@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sky Lite Remote</title>
+<meta name="description" content="Direct Bluetooth control for BlissLights Sky Lite 2.0 -- no app required.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#07080f">
+<!-- iOS home-screen / PWA-like launch (Bluefy: open URL, Add to Home Screen) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sky Lite">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    /* Deep-space navy + a single warm "starlight" accent -- a palette
+       actually tied to what this controls (a star/nebula projector),
+       instead of the reflexive purple/cyan gradient pairing. */
+    --bg:#07080f; --panel:#12141f; --panel2:#1a1d2c;
+    --text:#eef0f6; --muted:#7d8296; --hair:#22263a;
+    --accent:#e8b64a; --accent-ink:#241a05;
+    --ok:#5fd08a; --err:#ff8a93;
+    /* strong custom easings -- built-in CSS eases feel weak/sluggish */
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-in-out:cubic-bezier(.77,0,.175,1);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;}
+  body{
+    padding:max(20px,env(safe-area-inset-top)) 18px 44px; max-width:520px; margin:0 auto;
+    background-color:var(--bg);
+    /* a quiet, fixed starfield -- the one piece of decoration here, and
+       it's decoration that's actually about the product */
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.5), transparent 60%),
+      radial-gradient(1px 1px at 68% 8%,  rgba(255,255,255,.35), transparent 60%),
+      radial-gradient(1.5px 1.5px at 85% 26%, rgba(255,255,255,.4), transparent 60%),
+      radial-gradient(1px 1px at 34% 42%, rgba(255,255,255,.3), transparent 60%),
+      radial-gradient(1px 1px at 8% 66%,  rgba(255,255,255,.4), transparent 60%),
+      radial-gradient(1.5px 1.5px at 92% 72%, rgba(255,255,255,.3), transparent 60%),
+      radial-gradient(1px 1px at 52% 88%, rgba(255,255,255,.3), transparent 60%);
+    background-size:100% 100%;
+    background-attachment:fixed;
+  }
+  h1{font-size:26px; font-weight:700; margin:4px 0 2px; letter-spacing:-.02em;}
+  .sub{color:var(--muted); font-size:14px; margin-bottom:22px;}
+  button{font-family:inherit; cursor:pointer; border:none; color:var(--text);
+    transition:transform .14s var(--ease-out), filter .14s var(--ease-out), opacity .14s var(--ease-out);}
+  button:active{transform:scale(.97); filter:brightness(.92);}
+  .connect{width:100%; padding:16px; font-size:16px; font-weight:650; border-radius:14px;
+    background:var(--accent); color:var(--accent-ink); margin-bottom:10px;}
+  .status{font-size:13px; color:var(--muted); text-align:center; min-height:18px; margin-bottom:20px;}
+  .status.on{color:var(--ok);}
+  .status.err{color:var(--err);}
+  .card{background:var(--panel); border:1px solid var(--hair); border-radius:16px; padding:18px; margin-bottom:12px;}
+  .card h2{font-size:12px; font-weight:650; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.08em; margin:0 0 14px;}
+  .power{display:flex; gap:10px;}
+  .power button{flex:1; padding:18px 0; font-size:17px; font-weight:650; border-radius:12px; background:var(--panel2);}
+  .power .on{background:var(--accent); color:var(--accent-ink);}
+  .power .off{background:var(--panel2); color:var(--text);}
+  .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:9px;}
+  .grid button{display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:14px 14px; border-radius:12px; background:var(--panel2); font-size:14px; font-weight:600;
+    text-align:left; border:1.5px solid var(--hair);}
+  .grid button.active{border-color:var(--accent);}
+  .grid button .check{opacity:0; color:var(--accent); font-weight:800; font-size:16px; flex-shrink:0;
+    transform:scale(.8); transition:opacity .16s var(--ease-out), transform .16s var(--ease-out);}
+  .grid button.active .check{opacity:1; transform:scale(1);}
+  @keyframes itemIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .grid button{animation:itemIn .32s var(--ease-out) backwards;}
+  .grid button:nth-child(1){animation-delay:0ms;}
+  .grid button:nth-child(2){animation-delay:35ms;}
+  .grid button:nth-child(3){animation-delay:70ms;}
+  .grid button:nth-child(4){animation-delay:105ms;}
+  .grid button:nth-child(5){animation-delay:140ms;}
+  .grid button:nth-child(6){animation-delay:175ms;}
+  .grid button:nth-child(7){animation-delay:210ms;}
+  .grid button:nth-child(8){animation-delay:245ms;}
+  .chiprow{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:18px;}
+  .chip{padding:10px 4px; border-radius:12px; background:var(--panel2); color:var(--text);
+    font-size:13px; font-weight:600; border:1.5px solid var(--hair); text-align:center;
+    transition:background-color .16s var(--ease-out), border-color .16s var(--ease-out),
+      color .16s var(--ease-out), transform .14s var(--ease-out), filter .14s var(--ease-out);}
+  .chip[data-ch="r"].active{background:#a5222f; border-color:#c4344a; color:#f5f6fa;}
+  .chip[data-ch="g"].active{background:#166a38; border-color:#238a4b; color:#f5f6fa;}
+  .chip[data-ch="b"].active{background:#1f4faa; border-color:#3566c8; color:#f5f6fa;}
+  .chip.laser.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .chip.wide.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .seg{display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1.5px solid var(--hair);
+    border-radius:12px; overflow:hidden;}
+  .seg button{padding:12px 4px; background:var(--panel2); color:var(--text); font-size:14px; font-weight:600;
+    border-right:1.5px solid var(--hair);}
+  .seg button:last-child{border-right:none;}
+  .seg button.active{background:var(--accent); color:var(--accent-ink);}
+  .slider{margin-bottom:12px;}
+  .slider:last-child{margin-bottom:0;}
+  .slider label{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:5px;}
+  .slider label span{color:var(--text); font-variant-numeric:tabular-nums;}
+  input[type=range]{-webkit-appearance:none; width:100%; height:4px; border-radius:2px; background:var(--panel2);}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+    background:var(--accent); border:3px solid var(--bg); box-shadow:0 0 0 1px var(--hair);
+    transition:transform .12s var(--ease-out);}
+  input[type=range]::-webkit-slider-thumb:active{transform:scale(1.15);}
+  .apply{width:100%; padding:14px; font-size:15px; font-weight:650; border-radius:12px; background:var(--accent); color:var(--accent-ink);}
+  #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
+  #controls.ready{opacity:1; pointer-events:auto;}
+  .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
+  .debug{font-size:11px; color:var(--muted); text-align:center; margin-top:10px; font-family:ui-monospace,Menlo,monospace; word-break:break-all; opacity:.8;}
+  @media (prefers-reduced-motion:reduce){
+    .grid button{animation:none;}
+    button{transition:opacity .14s var(--ease-out);}
+    button:active{transform:none;}
+  }
+</style>
+</head>
+<body>
+  <h1>Sky Lite Remote</h1>
+  <div class="sub">Let there be light!</div>
+
+  <button class="connect" id="connectBtn">Connect to light</button>
+  <div class="status" id="status">Tap Connect, then pick "BlissLights".</div>
+
+  <div id="controls">
+    <div class="card">
+      <h2>Power</h2>
+      <div class="power">
+        <button class="on"  onclick="cmd(()=>mesh.setPower(true))">On</button>
+        <button class="off" onclick="cmd(()=>mesh.setPower(false))">Off</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Presets</h2>
+      <div class="grid" id="presets"></div>
+    </div>
+
+    <div class="card">
+      <h2>Colors</h2>
+      <div class="chiprow" id="colorChips">
+        <button class="chip" data-ch="r">Red</button>
+        <button class="chip" data-ch="g">Green</button>
+        <button class="chip" data-ch="b">Blue</button>
+        <button class="chip laser" data-ch="laser">Laser dots</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Brightness</h2>
+      <div class="slider" style="margin-bottom:0;">
+        <label>Level <span id="brightVal">High</span></label>
+        <input type="range" id="bright" min="1" max="3" step="1" value="3">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Rotation</h2>
+      <div class="chiprow" style="grid-template-columns:1fr;">
+        <button class="chip wide" id="rotChip">Off</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">Tool by Kitchenzky</div>
+  <div class="debug" id="debug"></div>
+
+<script>
+"use strict";
+/* ============================ AES-128 (pure JS) ============================ */
+const SBOX = (() => {
+  const exp=new Uint8Array(256), log=new Uint8Array(256), s=new Uint8Array(256);
+  let x=1;
+  for(let i=0;i<255;i++){exp[i]=x; log[x]=i; x^=(x<<1)^((x&0x80)?0x11b:0); x&=0xff;}
+  const inv=a=>a===0?0:exp[(255-log[a])%255];
+  for(let i=0;i<256;i++){let b=inv(i),r=b; for(let k=0;k<4;k++){r=((r<<1)|(r>>7))&0xff; b^=r;} s[i]=(b^0x63)&0xff;}
+  return s;
+})();
+const RCON=[0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36];
+function mul(a,b){let r=0;for(let i=0;i<8;i++){if(b&1)r^=a;const hi=a&0x80;a=(a<<1)&0xff;if(hi)a^=0x1b;b>>=1;}return r;}
+function keyExpansion(key){
+  const w=new Uint8Array(176); w.set(key.subarray(0,16),0);
+  for(let i=16;i<176;i+=4){
+    let t0=w[i-4],t1=w[i-3],t2=w[i-2],t3=w[i-1];
+    if(i%16===0){[t0,t1,t2,t3]=[t1,t2,t3,t0];t0=SBOX[t0];t1=SBOX[t1];t2=SBOX[t2];t3=SBOX[t3];t0^=RCON[(i/16)-1];}
+    w[i]=w[i-16]^t0; w[i+1]=w[i-15]^t1; w[i+2]=w[i-14]^t2; w[i+3]=w[i-13]^t3;
+  }
+  return w;
+}
+function encryptBlock(key,input){
+  const w=keyExpansion(key); let s=new Uint8Array(input.subarray(0,16));
+  for(let i=0;i<16;i++)s[i]^=w[i];
+  for(let round=1;round<=10;round++){
+    for(let i=0;i<16;i++)s[i]=SBOX[s[i]];
+    let t=new Uint8Array(16);
+    for(let r=0;r<4;r++)for(let c=0;c<4;c++)t[c*4+r]=s[((c+r)%4)*4+r];
+    s=t;
+    if(round<10){
+      const o=new Uint8Array(16);
+      for(let c=0;c<4;c++){
+        const a0=s[c*4],a1=s[c*4+1],a2=s[c*4+2],a3=s[c*4+3];
+        o[c*4]=mul(a0,2)^mul(a1,3)^a2^a3;
+        o[c*4+1]=a0^mul(a1,2)^mul(a2,3)^a3;
+        o[c*4+2]=a0^a1^mul(a2,2)^mul(a3,3);
+        o[c*4+3]=mul(a0,3)^a1^a2^mul(a3,2);
+      }
+      s=o;
+    }
+    for(let i=0;i<16;i++)s[i]^=w[round*16+i];
+  }
+  return s;
+}
+/* ============================ Telink helpers ============================ */
+const rev=a=>{const b=new Uint8Array(a.length);for(let i=0;i<a.length;i++)b[i]=a[a.length-1-i];return b;};
+const aesAtt=(k,d)=>rev(encryptBlock(rev(k),rev(d)));       // reverse-in, reverse-out
+const aesNoFinal=(k,d)=>encryptBlock(rev(k),rev(d));         // reverse-in only
+const pad16=b=>{const o=new Uint8Array(16);o.set(b.subarray(0,16));return o;};
+const enc=s=>new TextEncoder().encode(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ============================ Device constants ============================ */
+const SERVICE="00010203-0405-0607-0809-0a0b0c0d1910";
+const CH_NOTIFY="00010203-0405-0607-0809-0a0b0c0d1911";
+const CH_COMMAND="00010203-0405-0607-0809-0a0b0c0d1912";
+const CH_PAIR="00010203-0405-0607-0809-0a0b0c0d1914";
+const MESH_NAME="telink_mesh0", MESH_PW="123";
+const REAL_MAC="A4C1385A60D1";                    // this light's hardware MAC
+const VENDOR=0x0211;
+const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47, SUB_MOTOR=0x42, SUB_BRIGHT=0x43;
+const PRESETS=[[1,"Stars + nebula"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
+               [6,"Space"],[2,"Fading"],[8,"Sunrise"],[9,"RGB auto"]];
+
+/* ============================ Mesh class ============================ */
+class TelinkMesh{
+  constructor(){
+    this.macRev=rev(Uint8Array.from(REAL_MAC.match(/.{2}/g).map(h=>parseInt(h,16))));
+    const nm=pad16(enc(MESH_NAME)), pw=pad16(enc(MESH_PW));
+    this.combined=new Uint8Array(16); for(let i=0;i<16;i++)this.combined[i]=nm[i]^pw[i];
+    this.seq=1+Math.floor(Math.random()*0xFFFFFE);
+    this.dst=0xFFFF;               // broadcast until we learn the real address
+    this.sessionKey=null; this.device=null;
+  }
+  async connect(){
+    this.device=await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true, optionalServices:[SERVICE]
+    });
+    this.device.addEventListener('gattserverdisconnected',()=>{
+      this.sessionKey=null;
+      setStatus("Disconnected — tap Connect to reconnect.","");
+      $("controls").classList.remove("ready");
+    });
+    const server=await this.device.gatt.connect();
+    const svc=await server.getPrimaryService(SERVICE);
+    this.pairCh=await svc.getCharacteristic(CH_PAIR);
+    this.cmdCh=await svc.getCharacteristic(CH_COMMAND);
+    this.notifyCh=await svc.getCharacteristic(CH_NOTIFY);
+
+    // --- mesh login handshake ---
+    const our=new Uint8Array(8); crypto.getRandomValues(our);
+    const km=new Uint8Array(16); km.set(our);
+    const v20=aesNoFinal(km,this.combined);
+    const encTail=rev(v20.subarray(8,16));
+    const pairPkt=new Uint8Array(17); pairPkt[0]=0x0C; pairPkt.set(our,1); pairPkt.set(encTail,9);
+    await this.pairCh.writeValue(pairPkt);
+    await sleep(300);
+    const resp=new Uint8Array((await this.pairCh.readValue()).buffer);
+    if(resp[0]!==0x0D) throw new Error("Light rejected pairing (0x"+resp[0].toString(16)+"). Close the BlissLights app on all phones, then retry.");
+    const dev=resp.subarray(1,9);
+    const cat=new Uint8Array(16); cat.set(our); cat.set(dev,8);
+    this.sessionKey=aesAtt(this.combined,cat);
+
+    // --- enable status notifications (to learn the mesh address) ---
+    await this.notifyCh.startNotifications();
+    this.notifyCh.addEventListener('characteristicvaluechanged',e=>this._onNotify(new Uint8Array(e.target.value.buffer)));
+    await this.notifyCh.writeValue(Uint8Array.of(0x01));
+    await sleep(900);
+  }
+  _onNotify(pkt){
+    if(!this.sessionKey||pkt.length<16) return;
+    const ns=new Uint8Array(8); ns.set(this.macRev.subarray(0,3),0); ns.set(pkt.subarray(0,5),3);
+    const blk=new Uint8Array(16); blk.set(ns,1);
+    const stream=aesAtt(this.sessionKey,blk);
+    const dec=new Uint8Array(pkt); for(let i=0;i<pkt.length-7;i++) dec[i+7]^=stream[i&15];
+    const op=dec[7], addr=dec[10];
+    if((op===0xDC||op===0xDB)&&addr!==0&&addr!==0xFF){ this.dst=addr; }
+  }
+  _build(cmd,data){
+    const p=new Uint8Array(20);
+    p[0]=this.seq&0xff; p[1]=(this.seq>>8)&0xff; p[2]=(this.seq>>16)&0xff;
+    this.seq=(this.seq+1)>0xFFFFFF?1:this.seq+1;
+    p[5]=this.dst&0xff; p[6]=(this.dst>>8)&0xff;
+    p[7]=cmd&0xff; p[8]=VENDOR&0xff; p[9]=(VENDOR>>8)&0xff;
+    for(let i=0;i<data.length&&i<10;i++) p[10+i]=data[i];
+    const an=new Uint8Array(16); an.set(this.macRev.subarray(0,4),0); an[4]=1;
+    an[5]=p[0];an[6]=p[1];an[7]=p[2];an[8]=0x0f;
+    let auth=new Uint8Array(aesAtt(this.sessionKey,an));
+    for(let i=0;i<15;i++)auth[i]^=p[i+5];
+    const mac=aesAtt(this.sessionKey,auth); p[3]=mac[0]; p[4]=mac[1];
+    const iv=new Uint8Array(16); iv.set(this.macRev.subarray(0,4),1); iv[5]=1; iv[6]=p[0];iv[7]=p[1];iv[8]=p[2];
+    const st=aesAtt(this.sessionKey,iv);
+    for(let i=0;i<15;i++)p[i+5]^=st[i];
+    return p;
+  }
+  async _send(cmd,data){
+    const pkt=this._build(cmd,data);
+    if(window.onCommandSent) window.onCommandSent(cmd,data,pkt);
+    if(this.cmdCh.writeValueWithoutResponse) await this.cmdCh.writeValueWithoutResponse(pkt);
+    else await this.cmdCh.writeValue(pkt);
+  }
+  setPower(on){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, on?1:0, 0x01)); }
+  loadScene(id){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, id&0xff, 0x00)); }
+  // Color: 0x47 full control. bright is a LEVEL 1-3 (not 0-255), motor is 0/255.
+  setColor(r,g,b,bright,laser,motor){ return this._send(OUTER, Uint8Array.of(SUB_CONTROL,r,g,b,laser,motor,bright,0)); }
+  // Brightness: dedicated command 0x43, level 1=Low 2=Medium 3=High.
+  setBrightness(level){ return this._send(OUTER, Uint8Array.of(SUB_BRIGHT, level&0xff)); }
+  // Rotation: dedicated command 0x42, 0=off 255=on.
+  setRotation(on){ return this._send(OUTER, Uint8Array.of(SUB_MOTOR, on?255:0)); }
+}
+
+/* ============================ UI wiring ============================ */
+let mesh=null;
+const $=id=>document.getElementById(id);
+function setStatus(t,cls){ const s=$("status"); s.textContent=t; s.className="status "+(cls||""); }
+
+// Shows the byte values of the last command sent, for troubleshooting.
+window.onCommandSent=(cmdByte,data,pkt)=>{
+  if(cmdByte!==OUTER) return;
+  const sub=data[0];
+  let msg="";
+  if(sub===SUB_CONTROL) msg=`color: R=${data[1]?1:0} G=${data[2]?1:0} B=${data[3]?1:0} laser=${data[4]?1:0}`;
+  else if(sub===SUB_BRIGHT) msg=`brightness level = ${data[1]}`;
+  else if(sub===SUB_MOTOR) msg=`rotation = ${data[1]?"on":"off"}`;
+  if(msg) $("debug").textContent="sent → "+msg;
+};
+
+$("connectBtn").onclick=async()=>{
+  if(!navigator.bluetooth){ setStatus("This browser has no Bluetooth. Open this page in the Bluefy app.","err"); return; }
+  try{
+    setStatus("Connecting…","");
+    mesh=new TelinkMesh();
+    await mesh.connect();
+    setStatus("Connected ✓","on");
+    $("controls").classList.add("ready");
+  }catch(e){ setStatus(e.message||String(e),"err"); }
+};
+
+// Serialize commands through a promise chain: every tap is sent in the
+// order it happened, none dropped. The old version dropped any command
+// that arrived while another was in flight (the "busy" guard), which is
+// what caused rapid switching to desync the lamp from the UI.
+let cmdChain=Promise.resolve();
+function cmd(fn){
+  if(!mesh||!mesh.sessionKey){ setStatus("Connect first.","err"); return; }
+  cmdChain=cmdChain.then(async()=>{
+    try{ await fn(); await sleep(25); }   // small gap so writes don't stampede
+    catch(e){ setStatus("Send failed: "+(e.message||e),"err"); }
+  });
+  return cmdChain;
+}
+
+// Shared state. bright is a LEVEL 1-3; motor is 0/255. Colors/laser are
+// on/off. Every color command (0x47) carries the CURRENT bright+motor so
+// that toggling a color never resets rotation or brightness -- that
+// cross-reset was the bug where rotation stopped on any other change.
+const st={r:true,g:true,b:true,laser:false, bright:3, motor:0};
+const BRIGHT_NAMES={1:"Low",2:"Medium",3:"High"};
+
+function clearPreset(){ document.querySelectorAll("#presets button").forEach(x=>x.classList.remove("active")); }
+
+// build preset buttons (single-select, with a check marker on the right)
+PRESETS.forEach(([id,label])=>{
+  const b=document.createElement("button");
+  b.innerHTML=`<span>${label}</span><span class="check">✓</span>`;
+  b.onclick=()=>{
+    document.querySelectorAll("#presets button").forEach(x=>x.classList.toggle("active",x===b));
+    cmd(()=>mesh.loadScene(id));
+  };
+  $("presets").appendChild(b);
+});
+
+// full-state color command (0x47) -- always sends every field
+function sendColor(){
+  clearPreset();  // going manual leaves preset mode
+  cmd(()=>mesh.setColor(
+    st.r?255:0, st.g?255:0, st.b?255:0,
+    st.bright, st.laser?255:0, st.motor
+  ));
+}
+
+// --- Colors: 3 independent on/off channels + laser ---
+document.querySelectorAll("#colorChips .chip").forEach(chip=>{
+  const ch=chip.dataset.ch;
+  chip.classList.toggle("active",st[ch]);
+  chip.onclick=()=>{ st[ch]=!st[ch]; chip.classList.toggle("active",st[ch]); sendColor(); };
+});
+
+// --- Brightness: 3-step slider (dedicated 0x43 command) ---
+$("bright").addEventListener("input",()=>{
+  st.bright=+$("bright").value; $("brightVal").textContent=BRIGHT_NAMES[st.bright];
+});
+function sendBright(){ cmd(()=>mesh.setBrightness(st.bright)); }
+$("bright").addEventListener("change",sendBright);
+$("bright").addEventListener("touchend",sendBright);
+
+// --- Rotation: on/off toggle (dedicated 0x42 command) ---
+$("rotChip").onclick=()=>{
+  st.motor = st.motor ? 0 : 255;
+  $("rotChip").classList.toggle("active", !!st.motor);
+  $("rotChip").textContent = st.motor ? "On" : "Off";
+  cmd(()=>mesh.setRotation(!!st.motor));
+};
+
+// --- Clean disconnect ---
+// The lamp allows only one connection and STOPS ADVERTISING while it
+// thinks it's connected. If we don't release it when leaving, it becomes
+// a "ghost connection": invisible to scans until power-cycled, even when
+// off. So actively disconnect when the page is hidden/closed, freeing the
+// lamp to advertise again -- this is what makes it findable while off.
+function releaseLamp(){
+  try{ if(mesh && mesh.device && mesh.device.gatt && mesh.device.gatt.connected) mesh.device.gatt.disconnect(); }catch(e){}
+}
+window.addEventListener("pagehide", releaseLamp);
+window.addEventListener("beforeunload", releaseLamp);
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden) releaseLamp(); });
+</script>
+</body>
+</html>

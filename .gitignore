@@ -1,0 +1,10 @@
+# repo-recon artifacts, not needed on GitHub Pages / not shippable (huge)
+*.apk
+__pycache__/
+androguard.db
+androguard.db-journal
+androguard.log
+class_list.txt
+extract.log
+quhwa_telink_classes.txt
+extract_classes.py

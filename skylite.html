@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=National+Park:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=National+Park:wght@400;700&amp;display=swap" rel="stylesheet">
 <meta name="theme-color" content="#07080f">
 <!-- iOS home-screen / PWA-like launch (Bluefy: open URL, Add to Home Screen) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -45,6 +45,7 @@
   button{font-family:inherit; cursor:pointer; border:none; color:var(--text);
     transition:transform .14s var(--ease-out), filter .14s var(--ease-out), opacity .14s var(--ease-out);}
   button:active{transform:scale(.97); filter:brightness(.92);}
+  button:disabled{cursor:default;}
   .connect{width:62px; height:62px; padding:0; font-size:0; font-weight:700; border-radius:999px;
     background:var(--accent); color:var(--accent-ink); margin:0 auto 10px; display:block;
     align-items:center; justify-content:center; transition:transform .16s ease, opacity .16s ease;}
@@ -156,6 +157,8 @@
   .apply{width:100%; padding:14px; font-size:15px; font-weight:650; border-radius:12px; background:var(--accent); color:var(--accent-ink);}
   #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
   #controls.ready{opacity:1; pointer-events:auto;}
+  #lightSettings.unavailable{opacity:.48;}
+  #lightSettings.unavailable button,#lightSettings.unavailable input{cursor:default;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
   .diagnostics-view[hidden]{display:none;}
   .diagnostics-view{position:fixed; inset:0; z-index:100; width:100%; max-width:520px; height:100vh; height:100dvh;
@@ -238,25 +241,25 @@
       <h2><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg>Power</h2>
       <div class="power">
         <label class="toggle-switch">
-          <input type="checkbox" id="powerToggle" class="checkbox">
+          <input type="checkbox" id="powerToggle" class="checkbox" aria-label="Power">
           <span class="slider"></span>
         </label>
       </div>
     </div>
 
-    <div class="card">
-      <div class="tabs">
-        <button class="tab-button icon-tab active" data-tab="presetsTab"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/></svg>PRESETS</button>
-        <button class="tab-button icon-tab" data-tab="lightControlTab"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg>LIGHT CONTROL</button>
+    <div class="card" id="lightSettings">
+      <div class="tabs" role="tablist" aria-label="Light settings">
+        <button class="tab-button icon-tab active" type="button" role="tab" id="presetsTabButton" data-tab="presetsTab" aria-controls="presetsTab" aria-selected="true"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/></svg>PRESETS</button>
+        <button class="tab-button icon-tab" type="button" role="tab" id="lightControlTabButton" data-tab="lightControlTab" aria-controls="lightControlTab" aria-selected="false" tabindex="-1"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg>LIGHT CONTROL</button>
       </div>
       <div class="tab-panels">
-      <div class="tab-panel active" id="presetsTab">
+      <div class="tab-panel active" id="presetsTab" role="tabpanel" aria-labelledby="presetsTabButton">
         <div class="group">
           <h3 class="section-label"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>Preset list</h3>
           <div class="grid" id="presets"></div>
         </div>
       </div>
-      <div class="tab-panel" id="lightControlTab">
+      <div class="tab-panel" id="lightControlTab" role="tabpanel" aria-labelledby="lightControlTabButton" aria-hidden="true">
         <div class="group">
           <h3 class="section-label"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>Colors</h3>
           <div class="grid" id="colorChips">
@@ -370,9 +373,35 @@ const aesNoFinal=(k,d)=>encryptBlock(rev(k),rev(d));         // reverse-in only
 const pad16=b=>{const o=new Uint8Array(16);o.set(b.subarray(0,16));return o;};
 const enc=s=>new TextEncoder().encode(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function withTimeout(promise,timeoutMs,stage){
+  if(!timeoutMs) return Promise.resolve(promise);
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const timer=setTimeout(()=>{
+      if(settled) return;
+      settled=true;
+      const error=new Error(stage+" timed out after "+timeoutMs+" ms.");
+      error.name="TimeoutError";
+      error.bluetoothStage=stage;
+      error.timeoutMs=timeoutMs;
+      reject(error);
+    },timeoutMs);
+    Promise.resolve(promise).then(value=>{
+      if(settled) return;
+      settled=true;
+      clearTimeout(timer);
+      resolve(value);
+    },error=>{
+      if(settled) return;
+      settled=true;
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-21-diagnostics-12";
+const APP_BUILD="2026-07-21-diagnostics-14";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -520,7 +549,9 @@ function diagnosticLog(category,event,details,level="INFO"){
   const extra=diagnosticDetails(details);
   diagnosticEntries.push(new Date().toISOString()+" +"+elapsed+"s ["+diagnosticSessionId+"] ["+level+"] ["+category+"] "+event+(extra?" | "+extra:""));
   trimDiagnosticEntries();
-  scheduleDiagnosticPersistence(level!=="INFO"||category==="APP"||category==="LIFECYCLE");
+  // Lifecycle handlers must release GATT before doing synchronous storage work.
+  // The final APP session event still flushes the complete in-memory history.
+  scheduleDiagnosticPersistence(level!=="INFO"||category==="APP");
   scheduleDiagnosticRender(level!=="INFO");
 }
 function diagnosticError(category,event,error,extra){
@@ -576,6 +607,11 @@ const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
                [COSMIC_PULSE_ID,"Cosmic Pulse"],[PRISM_PULSE_ID,"RGB Pulse"],[2,"Fading"]];
 const SMOOTH_PULSE_STEPS=96;
 const SMOOTH_PULSE_DELAY=85;
+// Perfect Blue previously sent about nine frames per second, while this
+// projector emits 0x47 feedback at only about four per second. Keep
+// the same roughly 12-second fade, but stop flooding its firmware queue.
+const PERFECT_BLUE_STEPS=48;
+const PERFECT_BLUE_DELAY=220;
 const COSMIC_LASER_MIN=32;
 const PERFECT_BLUE_COLOR_MIN=64;
 const PERFECT_BLUE_LASER_MIN=16;
@@ -583,6 +619,35 @@ const PRISM_PULSE_COLORS=[[255,0,0],[0,0,255],[0,255,0]];
 const PRISM_TRANSITION_STEPS=144;
 const PRISM_PULSE_DELAY=100;
 const PRISM_PULSE_FLOOR=.55;
+const BT_TIMEOUT={
+  GATT_CONNECT:10000,
+  DISCOVERY:5000,
+  PAIR_IO:4000,
+  NOTIFY_IO:4000,
+  STATUS_IO:2500,
+  WRITE:2500,
+  RESTORE:5000
+};
+// diagnostics-12 measured roughly 154 ms from a local write completion to
+// the matching projector notification. Give the dark preload enough time to
+// reach firmware before asserting power, then resend after power regardless.
+const CONNECT_PRELOAD_SETTLE_MS=200;
+const ANIMATION_RETRY_DELAYS=[150,350];
+const ANIMATION_STALL_MS=5000;
+const SCREEN_DIM_TIMEOUT_MS=750;
+const bluetoothDeviceOwners=new Map();
+function bluetoothDeviceOwnerKey(device){
+  return device?.id ? "device:"+device.id : device;
+}
+function connectStageTimeout(stage){
+  if(stage==="gatt connect") return BT_TIMEOUT.GATT_CONNECT;
+  if(/service|characteristic/.test(stage)) return BT_TIMEOUT.DISCOVERY;
+  if(/login/.test(stage)) return BT_TIMEOUT.PAIR_IO;
+  if(/notification/.test(stage)) return BT_TIMEOUT.NOTIFY_IO;
+  if(/status|destination/.test(stage)) return BT_TIMEOUT.STATUS_IO;
+  if(/power|preload|restoration|output/.test(stage)) return BT_TIMEOUT.RESTORE;
+  return 0;
+}
 function describeMeshCommand(cmd,data){
   if(cmd===0xDA) return {name:"status.query",mode:data.length?"0x"+data[0].toString(16).padStart(2,"0"):"missing"};
   if(cmd!==OUTER) return {name:"opcode."+cmd.toString(16).padStart(2,"0"),data:diagnosticHex(data)};
@@ -613,14 +678,48 @@ class TelinkMesh{
     this.latestSuppressedNotification=null;
     this.currentAnimationFrame=null;
     this.animationCycleCounts={};
+    this.animationStartedAt=0;
+    this.animationLocalWriteCount=0;
+    this.lastAnimationLocalFrame=null;
+    this.animationFeedbackCount=0;
+    this.animationFeedbackChangeCount=0;
+    this.animationRepeatedFeedbackCount=0;
+    this.animationLocalWritesAtLastFeedbackProgress=0;
+    this.lastAnimationFeedbackAt=0;
+    this.lastAnimationFeedbackProgressAt=0;
+    this.lastAnimationFeedback=null;
+    this.animationFeedbackStalled=false;
+    this.animationFeedbackStalledSince=0;
     this.connectCancelled=false;
     this.connectCancelReason="";
     this.lastConnectFailureStage=null;
+    this.sessionEpoch=1;
+    this.commandChain=Promise.resolve();
+    this.commandQueueDepth=0;
+    this.appliedState={power:null,mode:null,presetId:null,manual:null};
+    this.restoredOutputPlan=null;
   }
   async _connectAwait(promise,stage){
-    const value=await promise;
-    this._throwIfConnectCancelled(stage);
-    return value;
+    const awaitEpoch=this.sessionEpoch;
+    try{
+      const value=await withTimeout(promise,connectStageTimeout(stage),stage);
+      if(this.sessionEpoch!==awaitEpoch){
+        const error=new Error("Bluetooth session changed during "+stage+".");
+        error.name="NetworkError";
+        throw error;
+      }
+      this._throwIfConnectCancelled(stage);
+      return value;
+    }catch(error){
+      try{
+        if(error&&typeof error==="object"&&!error.telinkConnectStage) error.telinkConnectStage=stage;
+      }catch(ignored){}
+      throw error;
+    }
+  }
+  isSessionCurrent(epoch){
+    return epoch===this.sessionEpoch && !this.connectCancelled &&
+      !!this.sessionKey && !!this.device?.gatt?.connected;
   }
   _throwIfConnectCancelled(stage){
     if(!this.connectCancelled) return;
@@ -631,27 +730,42 @@ class TelinkMesh{
     error.name="AbortError";
     throw error;
   }
-  async connect(device){
+  async connect(device,{assertPower=true,connectionReason="explicit Connect"}={}){
     const connectStarted=performance.now();
     let stage="listener setup";
     this.connectCancelled=false;
     this.connectCancelReason="";
     this.lastConnectFailureStage=null;
     this.device=device;
-    diagnosticLog("BT","CONNECT_START",{device:diagnosticDeviceRef(device),alreadyConnected:!!device?.gatt?.connected});
+    diagnosticLog("BT","CONNECT_START",{device:diagnosticDeviceRef(device),alreadyConnected:!!device?.gatt?.connected,assertPower,connectionReason});
     this.disconnectHandler=()=>{
       diagnosticLog("BT","GATT_DISCONNECTED",{expected:false,hadSession:!!this.sessionKey,activePresetId},"WARN");
       this._clearConnection(false,"gattserverdisconnected event");
       if(mesh!==this) return;
+      connectionReady=false;
       stopPresetEffect();
       setStatus("error","Unexpected GATT disconnect");
-      $("controls").classList.remove("ready");
+      updateControlAvailability();
     };
     this.device.addEventListener('gattserverdisconnected',this.disconnectHandler);
     try{
       stage="gatt connect";
       diagnosticLog("BT","GATT_CONNECT_START");
-      const server=await this._connectAwait(this.device.gatt.connect(),"gatt connect");
+      const connectEpoch=this.sessionEpoch;
+      const deviceOwnerKey=bluetoothDeviceOwnerKey(this.device);
+      bluetoothDeviceOwners.set(deviceOwnerKey,this);
+      const nativeConnect=this.device.gatt.connect();
+      nativeConnect.then(()=>{
+        if(this.sessionEpoch===connectEpoch&&bluetoothDeviceOwners.get(deviceOwnerKey)===this) return;
+        // A timed-out native connect can finish long after JavaScript gave up.
+        // Release it only when no newer mesh owns the same BluetoothDevice.
+        if(!bluetoothDeviceOwners.has(deviceOwnerKey)&&this.device?.gatt?.connected){
+          try{ this.device.gatt.disconnect(); }
+          catch(error){ diagnosticError("BT","LATE_GATT_RELEASE_FAILED",error); }
+          diagnosticLog("BT","LATE_GATT_RELEASED",{reason:"stale native connect completion"},"WARN");
+        }
+      }).catch(()=>{});
+      const server=await this._connectAwait(nativeConnect,"gatt connect");
       diagnosticLog("BT","GATT_CONNECT_OK",{connected:!!this.device.gatt.connected});
       stage="service discovery";
       const svc=await this._connectAwait(server.getPrimaryService(SERVICE),"service discovery");
@@ -703,38 +817,50 @@ class TelinkMesh{
         diagnosticLog("RX","INITIAL_NOTIFY_READ",{length:initial.byteLength});
         this._onNotify(new Uint8Array(initial.buffer));
       }catch(e){
-        if(e.name==="AbortError") throw e;
+        if(e.name==="AbortError"||e.name==="TimeoutError") throw e;
         if(this.connectCancelled) this._throwIfConnectCancelled("initial notification read");
         diagnosticError("RX","INITIAL_NOTIFY_READ_FAILED",e);
       }
       stage="status synchronization";
-      await this._connectAwait(sleep(200),"status synchronization delay");
-      await this._connectAwait(this._waitForDst(2000),"destination synchronization");
-      await this._connectAwait(this.queryStatus(),"first status query");
-      await this._connectAwait(sleep(300),"first status response wait");
-      await this._connectAwait(this._readStatusNotification(),"status notification read");
-      await this._connectAwait(sleep(300),"second status query delay");
-      await this._connectAwait(this.queryStatus(),"second status query");
-      await this._connectAwait(sleep(700),"final status response wait");
+      await this._connectAwait(sleep(100),"status synchronization delay");
+      await this._connectAwait(this._waitForDst(700),"destination synchronization");
+      if(this.dst===0xFFFF){
+        diagnosticLog("STATE","STATUS_QUERY_NEEDED",{reason:"destination still unknown"});
+        await this._connectAwait(this.queryStatus(),"status query");
+        await this._connectAwait(sleep(250),"status response wait");
+        await this._connectAwait(this._readStatusNotification(),"status notification read");
+        await this._connectAwait(this._waitForDst(500),"destination synchronization after query");
+      }else{
+        diagnosticLog("STATE","STATUS_QUERY_SKIPPED",{reason:"destination already learned"});
+      }
       if(!this.sessionKey||!this.device?.gatt?.connected){
         throw new Error("Connection was interrupted. Tap Connect to retry.");
       }
-      // Sky Lite's online/status packets do not expose its real projector
-      // power state. Make Connect deterministic instead: an already-on
-      // projector stays on, while an off projector turns on. This dedicated
-      // power command does not reload or replace the running preset.
-      diagnosticLog("STATE","CONNECT_POWER_ON_START",{previous:powerOn?"ON":"OFF",passiveStateKnown:this.powerStateKnown});
-      await this._connectAwait(this.setPower(true),"connect power-on synchronization");
-      this._setCommandedPowerState(true,"successful Connect");
-      const presetToRestore=activePresetId;
-      diagnosticLog("PRESET","CONNECT_RESTORE_START",{
-        presetId:presetToRestore,
-        label:PRESETS.find(([presetId])=>presetId===presetToRestore)?.[1]||"Unknown",
-        animated:isAnimatedPreset(presetToRestore)
-      });
-      const presetRestored=await this._connectAwait(applyPreset(presetToRestore,"successful Connect restore"),"connect preset restoration");
-      if(presetRestored===false) throw new Error("Connected, but could not restore the saved preset. Tap Connect to retry.");
-      diagnosticLog("PRESET","CONNECT_RESTORE_DONE",{presetId:presetToRestore,source:this.presetStateSource});
+      const restorePlan=captureDesiredOutputPlan();
+      if(assertPower){
+        // Preload before an explicit physical wake to hide the firmware's
+        // brief default-color frame, then restore once more after power-on.
+        stage="output preload";
+        await this._connectAwait(tryPreloadDesiredOutput(this,restorePlan,"successful Connect"),"connect output preload");
+        await this._connectAwait(sleep(CONNECT_PRELOAD_SETTLE_MS),"connect preload settle");
+        diagnosticLog("STATE","CONNECT_POWER_ON_START",{previous:powerOn?"ON":"OFF",passiveStateKnown:this.powerStateKnown});
+        stage="power synchronization";
+        await this._connectAwait(this.setPower(true),"connect power-on synchronization");
+        this._setCommandedPowerState(true,"successful Connect");
+      }else{
+        diagnosticLog("STATE","CONNECT_POWER_ON_SKIPPED",{
+          reason:connectionReason,
+          expectedPower:powerOn?"ON":"OFF",
+          purpose:"resume the existing powered session without a wake blink"
+        });
+      }
+      stage="output restoration";
+      const outputRestoreReason=assertPower?"post-power restore":connectionReason+" output restore";
+      diagnosticLog("STATE","CONNECT_OUTPUT_RESTORE_START",Object.assign({assertPower,reason:outputRestoreReason},describeDesiredOutputPlan(restorePlan)));
+      await this._connectAwait(writeDesiredOutput(this,restorePlan,outputRestoreReason),"connect output restoration");
+      markAppliedOutput(this,restorePlan,connectionReason+" restore");
+      this.restoredOutputPlan=restorePlan;
+      diagnosticLog("STATE","CONNECT_OUTPUT_RESTORE_DONE",describeDesiredOutputPlan(restorePlan));
       this.statusSyncActive=false;
       diagnosticLog("BT","CONNECT_READY",{
         durationMs:Math.round(performance.now()-connectStarted),
@@ -742,31 +868,38 @@ class TelinkMesh{
         powerStateKnown:this.powerStateKnown,
         powerSource:this.powerStateSource,
         power:powerOn?"ON":"OFF",
+        mode:activeMode,
         presetId:activePresetId,
         presetSource:this.presetStateSource
       });
     }catch(e){
-      this.lastConnectFailureStage=stage;
-      try{ if(e&&typeof e==="object") e.telinkConnectStage=stage; }catch(ignored){}
-      if(e.name==="AbortError"||this.connectCancelled) diagnosticLog("BT","CONNECT_CANCELLED",{stage,reason:this.connectCancelReason||e.message,durationMs:Math.round(performance.now()-connectStarted)},"WARN");
-      else diagnosticError("BT","CONNECT_FAILED",e,{stage,durationMs:Math.round(performance.now()-connectStarted)});
-      if(this.disconnectHandler||this.notifyHandler||this.sessionKey||this.device?.gatt?.connected) this.disconnect("connect failure: "+stage);
+      const failureStage=e?.telinkConnectStage||stage;
+      this.lastConnectFailureStage=failureStage;
+      try{ if(e&&typeof e==="object"&&!e.telinkConnectStage) e.telinkConnectStage=failureStage; }catch(ignored){}
+      if(e.name==="AbortError"||this.connectCancelled) diagnosticLog("BT","CONNECT_CANCELLED",{stage:failureStage,reason:this.connectCancelReason||e.message,durationMs:Math.round(performance.now()-connectStarted)},"WARN");
+      else diagnosticError("BT","CONNECT_FAILED",e,{stage:failureStage,durationMs:Math.round(performance.now()-connectStarted)});
+      if(this.disconnectHandler||this.notifyHandler||this.sessionKey||this.device?.gatt?.connected||bluetoothDeviceOwners.get(bluetoothDeviceOwnerKey(this.device))===this) this.disconnect("connect failure: "+failureStage);
       throw e;
     }
   }
   _clearConnection(disconnect,reason="cleanup"){
     const before={reason,intentional:disconnect,hadSession:!!this.sessionKey,gattConnected:!!this.device?.gatt?.connected,powerStateKnown:this.powerStateKnown};
-    try{
-      if(this.notifyCh&&this.notifyHandler) this.notifyCh.removeEventListener('characteristicvaluechanged',this.notifyHandler);
-    }catch(e){ diagnosticError("BT","NOTIFY_LISTENER_REMOVE_FAILED",e,{reason}); }
+    this.sessionEpoch++;
+    const deviceOwnerKey=bluetoothDeviceOwnerKey(this.device);
+    const ownsDevice=bluetoothDeviceOwners.get(deviceOwnerKey)===this;
     try{
       if(this.device&&this.disconnectHandler) this.device.removeEventListener('gattserverdisconnected',this.disconnectHandler);
     }catch(e){ diagnosticError("BT","DISCONNECT_LISTENER_REMOVE_FAILED",e,{reason}); }
-    this.notifyHandler=null; this.disconnectHandler=null;
-    if(disconnect){
+    this.disconnectHandler=null;
+    if(disconnect&&ownsDevice){
       try{ if(this.device?.gatt?.connected) this.device.gatt.disconnect(); }
       catch(e){ diagnosticError("BT","GATT_DISCONNECT_FAILED",e,{reason}); }
     }
+    if(ownsDevice) bluetoothDeviceOwners.delete(deviceOwnerKey);
+    try{
+      if(this.notifyCh&&this.notifyHandler) this.notifyCh.removeEventListener('characteristicvaluechanged',this.notifyHandler);
+    }catch(e){ diagnosticError("BT","NOTIFY_LISTENER_REMOVE_FAILED",e,{reason}); }
+    this.notifyHandler=null;
     this.sessionKey=null;
     this.powerStateKnown=false;
     this.powerStateSource="unconfirmed";
@@ -815,18 +948,26 @@ class TelinkMesh{
     this.powerStateKnown=true;
     this.powerStateSource="device-reported";
     powerOn=state;
+    this.appliedState.power=state;
     savePowerState();
     syncPowerToggle();
+    updateControlAvailability();
     diagnosticLog("STATE","POWER_REPORTED",{previous:previous?"ON":"OFF",reported:state?"ON":"OFF",source:"device notification"});
   }
   _setCommandedPowerState(state,reason){
+    if(mesh!==this){
+      diagnosticLog("STATE","COMMANDED_POWER_IGNORED",{state,reason:"stale mesh"},"WARN");
+      return;
+    }
     const previous=powerOn;
     if(!state) stopPresetEffect(reason);
     this.powerStateKnown=true;
     this.powerStateSource="app-commanded";
     powerOn=state;
+    this.appliedState.power=state;
     savePowerState();
     syncPowerToggle();
+    updateControlAvailability();
     diagnosticLog("STATE","POWER_COMMANDED",{previous:previous?"ON":"OFF",commanded:state?"ON":"OFF",reason});
   }
   _onNotify(pkt){
@@ -839,6 +980,39 @@ class TelinkMesh{
     const stream=aesAtt(this.sessionKey,blk);
     const dec=new Uint8Array(pkt); for(let i=0;i<pkt.length-7;i++) dec[i+7]^=stream[i&15];
     const op=dec[7], payload=dec[10];
+    if(this===mesh&&activeAnimatedPresetId!==null&&dec.length>=17&&op===0xEA&&dec[10]===SUB_CONTROL){
+      const receivedAt=Date.now();
+      const wasStalled=this.animationFeedbackStalled;
+      const stalledFor=wasStalled&&this.animationFeedbackStalledSince?receivedAt-this.animationFeedbackStalledSince:0;
+      const previousFeedback=this.lastAnimationFeedback;
+      const nextFeedback={
+        r:dec[11],g:dec[12],b:dec[13],laser:dec[14],
+        rotation:dec[15],brightness:dec[16],receivedAt
+      };
+      const feedbackChanged=!previousFeedback||["r","g","b","laser","rotation","brightness"]
+        .some(key=>previousFeedback[key]!==nextFeedback[key]);
+      this.animationFeedbackCount++;
+      this.lastAnimationFeedbackAt=receivedAt;
+      this.lastAnimationFeedback=nextFeedback;
+      if(feedbackChanged){
+        this.animationFeedbackChangeCount++;
+        this.animationLocalWritesAtLastFeedbackProgress=this.animationLocalWriteCount;
+        this.lastAnimationFeedbackProgressAt=receivedAt;
+        this.animationFeedbackStalled=false;
+        this.animationFeedbackStalledSince=0;
+        if(wasStalled){
+          diagnosticLog("RX","ANIMATION_DEVICE_FEEDBACK_RECOVERED",{
+            presetId:activeAnimatedPresetId,
+            stalledForMs:stalledFor,
+            feedbackCount:this.animationFeedbackCount,
+            feedbackChangeCount:this.animationFeedbackChangeCount,
+            state:this.lastAnimationFeedback
+          });
+        }
+      }else{
+        this.animationRepeatedFeedbackCount++;
+      }
+    }
     const suppressAnimationNoise=!this.statusSyncActive&&activeAnimatedPresetId!==null&&op!==SUB_ONOFF;
     if(suppressAnimationNoise){
       this.suppressedAnimationNotifications++;
@@ -908,16 +1082,27 @@ class TelinkMesh{
     const started=performance.now();
     if(shouldLog) diagnosticLog("TX","COMMAND_START",Object.assign({destination:this.dst===0xFFFF?"unknown":"0x"+this.dst.toString(16)},details));
     try{
+      const sendEpoch=this.sessionEpoch;
+      if(!this.isSessionCurrent(sendEpoch)||!this.cmdCh) throw new Error("Bluetooth session is no longer available.");
       const pkt=this._build(cmd,data);
       try{ if(window.onCommandSent) window.onCommandSent(cmd,data,pkt); }
       catch(observerError){ diagnosticError("TX","COMMAND_OBSERVER_FAILED",observerError,{name:details.name}); }
       const withoutResponse=!!this.cmdCh.writeValueWithoutResponse;
-      if(withoutResponse) await this.cmdCh.writeValueWithoutResponse(pkt);
-      else await this.cmdCh.writeValue(pkt);
+      const writePromise=withoutResponse ? this.cmdCh.writeValueWithoutResponse(pkt) : this.cmdCh.writeValue(pkt);
+      await withTimeout(writePromise,BT_TIMEOUT.WRITE,details.name+" write");
+      if(!this.isSessionCurrent(sendEpoch)) throw new Error("Bluetooth session changed while sending the command.");
       if(shouldLog) diagnosticLog("TX","WRITE_COMPLETED",{name:details.name,withoutResponse,durationMs:Math.round(performance.now()-started),deviceConfirmed:false});
     }catch(e){
       diagnosticError("TX",shouldLog?"COMMAND_FAILED":"ANIMATED_WRITE_FAILED",e,{name:details.name,durationMs:Math.round(performance.now()-started),animation:this.currentAnimationFrame});
       if(e&&typeof e==="object") e.skyliteDiagnosticLogged=true;
+      if(e?.name==="TimeoutError"){
+        this.disconnect("write timeout: "+details.name);
+        if(mesh===this){
+          connectionReady=false;
+          stopPresetEffect("Bluetooth write timeout");
+          updateControlAvailability();
+        }
+      }
       throw e;
     }
   }
@@ -960,30 +1145,18 @@ function clearBluetoothDeviceId(){
     diagnosticLog("SELECT","SAVED_DEVICE_ID_CLEARED");
   }catch(e){ diagnosticError("STORAGE","DEVICE_ID_CLEAR_FAILED",e); }
 }
-async function selectBluetoothDevice(forceChooser=false){
-  const savedId=loadBluetoothDeviceId();
-  diagnosticLog("SELECT","SELECT_START",{forceChooser,savedIdPresent:!!savedId,getDevicesSupported:typeof navigator.bluetooth?.getDevices==="function"});
-  if(!forceChooser&&typeof navigator.bluetooth?.getDevices==="function"){
-    try{
-      diagnosticLog("SELECT","GET_DEVICES_START");
-      const devices=await navigator.bluetooth.getDevices();
-      diagnosticLog("SELECT","GET_DEVICES_RESULT",{count:devices.length,devices:devices.map(diagnosticDeviceRef)});
-      if(savedId){
-        const savedDevice=devices.find(device=>device.id===savedId);
-        if(savedDevice){
-          diagnosticLog("SELECT","SAVED_DEVICE_MATCH",{device:diagnosticDeviceRef(savedDevice)});
-          return {device:savedDevice,remembered:true,source:"saved device"};
-        }
-        diagnosticLog("SELECT","SAVED_DEVICE_MISS",{permittedCount:devices.length},"WARN");
-        clearBluetoothDeviceId();
-      }else if(devices.length===1){
-        // Migration from older builds that already had Bluefy permission.
-        diagnosticLog("SELECT","SINGLE_PERMISSION_MIGRATED",{device:diagnosticDeviceRef(devices[0])});
-        return {device:devices[0],remembered:true,source:"single existing permission"};
-      }
-    }catch(e){ diagnosticError("SELECT","GET_DEVICES_FAILED",e); }
-  }
-  diagnosticLog("SELECT","CHOOSER_OPEN",{forced:forceChooser});
+function chooserCanOpenFromCurrentGesture(){
+  return !document.hidden && (!navigator.userActivation||navigator.userActivation.isActive);
+}
+function chooserRequiredError(){
+  const error=new Error("Tap Connect again to choose BlissLights.");
+  error.name="ChooserRequiredError";
+  error.requiresChooserTap=true;
+  return error;
+}
+async function requestBluetoothDeviceFromChooser(forced){
+  if(!chooserCanOpenFromCurrentGesture()) throw chooserRequiredError();
+  diagnosticLog("SELECT","CHOOSER_OPEN",{forced});
   try{
     const device=await navigator.bluetooth.requestDevice({
       acceptAllDevices:true,
@@ -997,13 +1170,56 @@ async function selectBluetoothDevice(forceChooser=false){
     throw e;
   }
 }
+async function selectBluetoothDevice(forceChooser=false){
+  const savedId=loadBluetoothDeviceId();
+  diagnosticLog("SELECT","SELECT_START",{forceChooser,savedIdPresent:!!savedId,getDevicesSupported:typeof navigator.bluetooth?.getDevices==="function"});
+  if(forceChooser||typeof navigator.bluetooth?.getDevices!=="function"||!savedId){
+    if(savedId&&typeof navigator.bluetooth?.getDevices!=="function"){
+      diagnosticLog("SELECT","REMEMBERED_DEVICE_API_UNAVAILABLE",{result:"chooser required after reload"},"WARN");
+    }
+    return requestBluetoothDeviceFromChooser(forceChooser);
+  }
+  if(!forceChooser&&typeof navigator.bluetooth?.getDevices==="function"){
+    try{
+      diagnosticLog("SELECT","GET_DEVICES_START");
+      const devices=await withTimeout(navigator.bluetooth.getDevices(),2500,"remembered device lookup");
+      diagnosticLog("SELECT","GET_DEVICES_RESULT",{count:devices.length,devices:devices.map(diagnosticDeviceRef)});
+      const savedDevice=devices.find(device=>device.id===savedId);
+      if(savedDevice){
+        diagnosticLog("SELECT","SAVED_DEVICE_MATCH",{device:diagnosticDeviceRef(savedDevice)});
+        return {device:savedDevice,remembered:true,source:"saved device"};
+      }
+      diagnosticLog("SELECT","SAVED_DEVICE_MISS",{permittedCount:devices.length},"WARN");
+      clearBluetoothDeviceId();
+    }catch(e){ diagnosticError("SELECT","GET_DEVICES_FAILED",e); }
+  }
+  return requestBluetoothDeviceFromChooser(true);
+}
 let powerOn = loadPowerState();
 let activePresetId = loadPresetState() ?? DEFAULT_PRESET_ID;
+const MODE_PRESET="preset";
+const MODE_MANUAL="manual";
+let activeMode=MODE_PRESET;
+let desiredRevision=0;
+let powerRequestRevision=0;
+let powerTransactionPending=false;
+let connectionReady=false;
 let presetEffectTimer=null;
+let presetEffectWatchdogTimer=null;
 let presetEffectGeneration=0;
 let presetEffectWakeLock=null;
+let presetEffectLastFrameAt=0;
+let presetEffectConsecutiveFailures=0;
+let presetEffectFrameInFlight=false;
+let presetEffectFrameStartedAt=0;
+let presetEffectFrameToken=0;
+let presetEffectNextFrameIndex=0;
+let wakeLockReacquireTimes=[];
 let bluefyScreenDimDisabled=false;
-let bluefyScreenDimGeneration=0;
+let bluefyScreenDimDesiredEnabled=true;
+let bluefyScreenDimRequestToken=0;
+let bluefyScreenDimRestoreTimer=null;
+let bluefyScreenDimOperation=Promise.resolve();
 diagnosticLog("STATE","CACHED_STATE_LOADED",{power:powerOn?"ON":"OFF",powerSource:"local storage",presetId:activePresetId,presetSource:"local storage/UI; not device-confirmed",savedDeviceIdPresent:!!loadBluetoothDeviceId()});
 function savePowerState(){
   try{
@@ -1021,84 +1237,108 @@ function savePresetState(){
 function syncPowerToggle(){
   if(powerToggle) powerToggle.checked = powerOn;
 }
+function isConnectedMesh(runMesh=mesh){
+  return connectionReady && mesh===runMesh && !!runMesh?.sessionKey && !!runMesh.device?.gatt?.connected;
+}
+function updateControlAvailability(){
+  const connected=isConnectedMesh();
+  const controls=$("controls");
+  const settings=$("lightSettings");
+  if(!controls||!settings) return;
+  controls.classList.toggle("ready",connected);
+  controls.inert=!connected;
+  controls.setAttribute("aria-disabled",String(!connected));
+  const settingsEnabled=connected&&powerOn&&!powerTransactionPending;
+  settings.inert=!settingsEnabled;
+  settings.classList.toggle("unavailable",!settingsEnabled);
+  settings.setAttribute("aria-disabled",String(!settingsEnabled));
+  settings.querySelectorAll("button,input").forEach(control=>{ control.disabled=!settingsEnabled; });
+  powerToggle.disabled=!connected||powerTransactionPending;
+}
 function refreshManualUI(){
   document.querySelectorAll('#colorChips button').forEach(chip=>{
     const ch=chip.dataset.ch;
     chip.classList.toggle('active', !!st[ch]);
+    chip.setAttribute("aria-pressed",String(!!st[ch]));
   });
   document.querySelectorAll('#brightnessOptions button').forEach(btn=>{
     btn.classList.toggle('active', Number(btn.dataset.brightness)===st.bright);
+    btn.setAttribute("aria-pressed",String(Number(btn.dataset.brightness)===st.bright));
   });
   $("rotationToggle").checked = !!st.motor;
   $("rotationOffLabel").classList.toggle("active", !st.motor);
   $("rotationOnLabel").classList.toggle("active", !!st.motor);
 }
-function setPresetSelection(id,source="UI"){
+function renderPresetSelection(id=activePresetId){
+  document.querySelectorAll('#presets button').forEach(btn=>{
+    const selected=btn.dataset.presetId===String(id)&&activeMode===MODE_PRESET;
+    btn.classList.toggle('active',selected);
+    btn.setAttribute("aria-pressed",String(selected));
+  });
+}
+function setPresetSelection(id,source="UI",persist=true){
   const previous=activePresetId;
   activePresetId = id;
-  savePresetState();
-  document.querySelectorAll('#presets button').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.presetId===String(id));
-  });
+  if(persist) savePresetState();
+  renderPresetSelection(id);
   diagnosticLog("PRESET","UI_SELECTION",{previous,presetId:id,label:PRESETS.find(([presetId])=>presetId===id)?.[1]||"Unknown",source,deviceConfirmed:false});
 }
-function releasePresetEffectWakeLock(){
-  if(bluefyScreenDimDisabled){
-    bluefyScreenDimDisabled=false;
-    bluefyScreenDimGeneration=0;
-    try{
-      const restoreResult=navigator.bluetooth?.setScreenDimEnabled?.(true);
-      if(restoreResult&&typeof restoreResult.catch==="function"){
-        restoreResult.catch(e=>diagnosticError("PRESET","SCREEN_DIM_RESTORE_FAILED",e));
-      }
-      diagnosticLog("PRESET","SCREEN_DIM_RESTORE_REQUESTED");
-    }catch(e){ diagnosticError("PRESET","SCREEN_DIM_RESTORE_FAILED",e); }
+function presetWakeIsNeeded(generation){
+  return generation===presetEffectGeneration && !document.hidden &&
+    activeMode===MODE_PRESET && powerOn && activeAnimatedPresetId!==null &&
+    isConnectedMesh();
+}
+async function performBluefyScreenDimRequest(enabled,token,generation){
+  if(token!==bluefyScreenDimRequestToken||enabled!==bluefyScreenDimDesiredEnabled) return;
+  try{
+    const result=navigator.bluetooth?.setScreenDimEnabled?.(enabled);
+    if(result&&typeof result.then==="function"){
+      await withTimeout(result,SCREEN_DIM_TIMEOUT_MS,"Bluefy screen dim "+(enabled?"restore":"disable"));
+    }
+    if(token!==bluefyScreenDimRequestToken||enabled!==bluefyScreenDimDesiredEnabled) return;
+    bluefyScreenDimDisabled=!enabled;
+    diagnosticLog("PRESET",enabled?"SCREEN_DIM_RESTORED":"SCREEN_DIM_DISABLED",{method:"Bluefy API",generation,presetId:activePresetId});
+  }catch(error){
+    diagnosticError("PRESET",enabled?"SCREEN_DIM_RESTORE_UNCONFIRMED":"SCREEN_DIM_DISABLE_UNCONFIRMED",error,{generation,fallback:enabled?"none":"Screen Wake Lock"});
+  }
+}
+function requestBluefyScreenDim(enabled,generation,{immediate=false}={}){
+  if(typeof navigator.bluetooth?.setScreenDimEnabled!=="function") return;
+  bluefyScreenDimDesiredEnabled=enabled;
+  const token=++bluefyScreenDimRequestToken;
+  if(bluefyScreenDimRestoreTimer!==null){
+    clearTimeout(bluefyScreenDimRestoreTimer);
+    bluefyScreenDimRestoreTimer=null;
+  }
+  const enqueue=()=>{
+    bluefyScreenDimOperation=bluefyScreenDimOperation
+      .then(()=>performBluefyScreenDimRequest(enabled,token,generation))
+      .catch(error=>diagnosticError("PRESET","SCREEN_DIM_QUEUE_FAILED",error));
+  };
+  if(enabled&&!immediate) bluefyScreenDimRestoreTimer=setTimeout(()=>{
+    bluefyScreenDimRestoreTimer=null;
+    enqueue();
+  },150);
+  else enqueue();
+  diagnosticLog("PRESET",enabled?"SCREEN_DIM_RESTORE_REQUESTED":"SCREEN_DIM_DISABLE_REQUESTED",{method:"Bluefy API",generation,presetId:activePresetId});
+}
+function releasePresetEffectWakeLock({immediateScreenDim=false,restoreScreenDim=true}={}){
+  if(restoreScreenDim&&(!bluefyScreenDimDesiredEnabled||bluefyScreenDimDisabled)){
+    requestBluefyScreenDim(true,presetEffectGeneration,{immediate:immediateScreenDim});
   }
   const lock=presetEffectWakeLock;
   presetEffectWakeLock=null;
   if(lock) lock.release().catch(()=>{});
 }
-async function keepPresetEffectAwake(generation){
-  if(generation!==presetEffectGeneration || document.hidden) return;
-  if(typeof navigator.bluetooth?.setScreenDimEnabled==="function"){
-    try{
-      const disableResult=navigator.bluetooth.setScreenDimEnabled(false);
-      bluefyScreenDimDisabled=true;
-      bluefyScreenDimGeneration=generation;
-      diagnosticLog("PRESET","SCREEN_DIM_DISABLE_REQUESTED",{method:"Bluefy API",presetId:activePresetId});
-      if(disableResult&&typeof disableResult.then==="function"){
-        Promise.resolve(disableResult).then(()=>{
-          if(bluefyScreenDimGeneration===generation&&generation===presetEffectGeneration&&!document.hidden&&isAnimatedPreset(activePresetId)){
-            bluefyScreenDimDisabled=true;
-            diagnosticLog("PRESET","SCREEN_DIM_DISABLED",{method:"Bluefy API",presetId:activePresetId});
-            return;
-          }
-          if(bluefyScreenDimGeneration!==0) return;
-          try{
-            const staleRestore=navigator.bluetooth.setScreenDimEnabled(true);
-            if(staleRestore&&typeof staleRestore.catch==="function"){
-              staleRestore.catch(e=>diagnosticError("PRESET","SCREEN_DIM_STALE_RESTORE_FAILED",e));
-            }
-          }catch(e){ diagnosticError("PRESET","SCREEN_DIM_STALE_RESTORE_FAILED",e); }
-        }).catch(e=>{
-          if(bluefyScreenDimGeneration===generation){
-            bluefyScreenDimDisabled=false;
-            bluefyScreenDimGeneration=0;
-          }
-          diagnosticError("PRESET","SCREEN_DIM_DISABLE_FAILED",e,{fallback:"Screen Wake Lock"});
-        });
-      }else{
-        diagnosticLog("PRESET","SCREEN_DIM_DISABLED",{method:"Bluefy API (synchronous)",presetId:activePresetId});
-      }
-    }catch(e){ diagnosticError("PRESET","SCREEN_DIM_DISABLE_FAILED",e,{fallback:"Screen Wake Lock"}); }
-  }
-  if(!navigator.wakeLock || presetEffectWakeLock){
-    if(!navigator.wakeLock) diagnosticLog("PRESET","WAKE_LOCK_UNAVAILABLE",{presetId:activePresetId},"WARN");
+async function acquirePresetWakeLock(generation){
+  if(!presetWakeIsNeeded(generation)||presetEffectWakeLock) return;
+  if(!navigator.wakeLock){
+    diagnosticLog("PRESET","WAKE_LOCK_UNAVAILABLE",{presetId:activePresetId},"WARN");
     return;
   }
   try{
     const lock=await navigator.wakeLock.request("screen");
-    if(generation!==presetEffectGeneration || document.hidden || !isAnimatedPreset(activePresetId)){
+    if(!presetWakeIsNeeded(generation)){
       await lock.release();
       return;
     }
@@ -1106,12 +1346,27 @@ async function keepPresetEffectAwake(generation){
     diagnosticLog("PRESET","WAKE_LOCK_ACQUIRED",{method:"Screen Wake Lock",presetId:activePresetId});
     lock.addEventListener("release",()=>{
       if(presetEffectWakeLock===lock) presetEffectWakeLock=null;
-      diagnosticLog("PRESET","WAKE_LOCK_RELEASED",{presetId:activePresetId});
+      const shouldReacquire=presetWakeIsNeeded(generation);
+      diagnosticLog("PRESET","WAKE_LOCK_RELEASED",{presetId:activePresetId,shouldReacquire});
+      if(!shouldReacquire) return;
+      const now=Date.now();
+      wakeLockReacquireTimes=wakeLockReacquireTimes.filter(time=>now-time<60000);
+      if(wakeLockReacquireTimes.length>=3){
+        diagnosticLog("PRESET","WAKE_LOCK_REACQUIRE_LIMIT",{attemptsLastMinute:wakeLockReacquireTimes.length},"WARN");
+        return;
+      }
+      wakeLockReacquireTimes.push(now);
+      setTimeout(()=>acquirePresetWakeLock(generation),500);
     });
   }catch(e){ diagnosticError("PRESET","WAKE_LOCK_FAILED",e,{presetId:activePresetId}); }
 }
+function keepPresetEffectAwake(generation){
+  if(!presetWakeIsNeeded(generation)) return;
+  requestBluefyScreenDim(false,generation,{immediate:true});
+  acquirePresetWakeLock(generation);
+}
 let activeAnimatedPresetId=null;
-function stopPresetEffect(reason="state change"){
+function stopPresetEffect(reason="state change",{deferWakeRelease=false,preserveScreenDim=false}={}){
   if(activeAnimatedPresetId!==null){
     mesh?._flushAnimationNotificationSummary?.("animation stopped: "+reason);
     diagnosticLog("PRESET","ANIMATION_STOP",{presetId:activeAnimatedPresetId,reason});
@@ -1122,14 +1377,28 @@ function stopPresetEffect(reason="state change"){
     clearTimeout(presetEffectTimer);
     presetEffectTimer=null;
   }
-  releasePresetEffectWakeLock();
+  if(presetEffectWatchdogTimer!==null){
+    clearTimeout(presetEffectWatchdogTimer);
+    presetEffectWatchdogTimer=null;
+  }
+  presetEffectLastFrameAt=0;
+  presetEffectConsecutiveFailures=0;
+  presetEffectFrameInFlight=false;
+  presetEffectFrameStartedAt=0;
+  presetEffectFrameToken++;
+  presetEffectNextFrameIndex=0;
+  if(!deferWakeRelease) releasePresetEffectWakeLock({restoreScreenDim:!preserveScreenDim});
 }
 function isAnimatedPreset(id){
   return id===COSMIC_PULSE_ID || id===PRISM_PULSE_ID || id===PERFECT_BLUE_ID;
 }
+function presetEffectIntentIsCurrent(generation,id){
+  return generation===presetEffectGeneration && activeMode===MODE_PRESET && activePresetId===id;
+}
 function presetEffectIsCurrent(generation,runMesh,id){
-  return generation===presetEffectGeneration &&
+  return presetEffectIntentIsCurrent(generation,id) &&
     mesh===runMesh &&
+    connectionReady && powerOn && !document.hidden && activeMode===MODE_PRESET &&
     activePresetId===id &&
     $("presetsTab").classList.contains("active") &&
     runMesh?.sessionKey && runMesh.device?.gatt?.connected;
@@ -1152,8 +1421,8 @@ function prismPulseFrame(index){
     0
   ];
 }
-function smoothPulseWave(index){
-  const phase=(index%SMOOTH_PULSE_STEPS)/SMOOTH_PULSE_STEPS;
+function smoothPulseWave(index,steps=SMOOTH_PULSE_STEPS){
+  const phase=(index%steps)/steps;
   return (1+Math.cos(2*Math.PI*phase))/2;
 }
 function cosmicPulseLaser(index){
@@ -1161,7 +1430,7 @@ function cosmicPulseLaser(index){
   return Math.round(COSMIC_LASER_MIN+(255-COSMIC_LASER_MIN)*wave);
 }
 function perfectBlueFrame(index){
-  const wave=smoothPulseWave(index);
+  const wave=smoothPulseWave(index,PERFECT_BLUE_STEPS);
   const blue=Math.round(PERFECT_BLUE_COLOR_MIN+(255-PERFECT_BLUE_COLOR_MIN)*wave);
   const laser=Math.round(PERFECT_BLUE_LASER_MIN+(255-PERFECT_BLUE_LASER_MIN)*(1-wave));
   return [0,0,blue,laser];
@@ -1174,14 +1443,17 @@ function animatedPresetFrame(id,index){
   return prismPulseFrame(index);
 }
 function animatedPresetDelay(id){
-  return id===PRISM_PULSE_ID ? PRISM_PULSE_DELAY : SMOOTH_PULSE_DELAY;
+  return id===PRISM_PULSE_ID ? PRISM_PULSE_DELAY
+    : id===PERFECT_BLUE_ID ? PERFECT_BLUE_DELAY
+    : SMOOTH_PULSE_DELAY;
 }
 function animatedPresetFrameCount(id){
   return id===PRISM_PULSE_ID
     ? PRISM_TRANSITION_STEPS*PRISM_PULSE_COLORS.length
+    : id===PERFECT_BLUE_ID ? PERFECT_BLUE_STEPS
     : SMOOTH_PULSE_STEPS;
 }
-async function sendAnimatedPresetFrame(runMesh,id,index){
+async function writeAnimatedPresetFrame(runMesh,id,index){
   const frame=animatedPresetFrame(id,index);
   const previousSuppression=runMesh.suppressCommandDiagnostics;
   const previousFrame=runMesh.currentAnimationFrame;
@@ -1193,8 +1465,120 @@ async function sendAnimatedPresetFrame(runMesh,id,index){
     runMesh.currentAnimationFrame=previousFrame;
   }
 }
+function armPresetEffectWatchdog(generation,runMesh,id){
+  if(presetEffectWatchdogTimer!==null) clearTimeout(presetEffectWatchdogTimer);
+  presetEffectWatchdogTimer=setTimeout(()=>{
+    presetEffectWatchdogTimer=null;
+    if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+    const stalledFor=Date.now()-presetEffectLastFrameAt;
+    const inFlightFor=presetEffectFrameInFlight?Date.now()-presetEffectFrameStartedAt:0;
+    if(!presetEffectFrameInFlight||inFlightFor<ANIMATION_STALL_MS){
+      if(stalledFor>=ANIMATION_STALL_MS&&!presetEffectFrameInFlight){
+        if(presetEffectTimer===null&&runMesh.commandQueueDepth===0){
+          diagnosticLog("PRESET","ANIMATION_TIMER_RECOVERED",{
+            presetId:id,
+            stalledForMs:stalledFor,
+            nextFrameIndex:presetEffectNextFrameIndex,
+            action:"recreate missing frame timer"
+          },"WARN");
+          schedulePresetEffect(generation,runMesh,id,presetEffectNextFrameIndex);
+        }else{
+          diagnosticLog("PRESET","ANIMATION_TIMER_DRIFT",{
+            presetId:id,
+            stalledForMs:stalledFor,
+            timerPresent:presetEffectTimer!==null,
+            commandQueueDepth:runMesh.commandQueueDepth,
+            action:"wait for existing timer or queued command"
+          },"WARN");
+        }
+      }
+      armPresetEffectWatchdog(generation,runMesh,id);
+      return;
+    }
+    diagnosticLog("PRESET","ANIMATION_STALLED",{presetId:id,stalledForMs:stalledFor,inFlightForMs:inFlightFor,lastLocalWriteCompletedAt:presetEffectLastFrameAt},"ERROR");
+    stopPresetEffect("animation watchdog",{deferWakeRelease:true});
+    if(mesh===runMesh){
+      connectionReady=false;
+      runMesh.disconnect("animation watchdog");
+      setStatus("error","Animation stopped because Bluetooth stopped responding");
+      updateControlAvailability();
+    }
+    releasePresetEffectWakeLock({immediateScreenDim:true});
+  },ANIMATION_STALL_MS);
+}
+async function sendAnimatedPresetFrame(runMesh,id,index,generation){
+  for(let attempt=0;attempt<=ANIMATION_RETRY_DELAYS.length;attempt++){
+    if(!presetEffectIsCurrent(generation,runMesh,id)) return false;
+    try{
+      const frameToken=++presetEffectFrameToken;
+      presetEffectFrameInFlight=true;
+      presetEffectFrameStartedAt=Date.now();
+      try{ await writeAnimatedPresetFrame(runMesh,id,index); }
+      finally{
+        if(frameToken===presetEffectFrameToken){
+          presetEffectFrameInFlight=false;
+          presetEffectFrameStartedAt=0;
+        }
+      }
+      if(!presetEffectIsCurrent(generation,runMesh,id)){
+        diagnosticLog("PRESET","ANIMATION_FRAME_COMPLETED_STALE",{presetId:id,frameIndex:index,generation},"WARN");
+        return false;
+      }
+      presetEffectConsecutiveFailures=0;
+      presetEffectLastFrameAt=Date.now();
+      runMesh.animationLocalWriteCount++;
+      runMesh.lastAnimationLocalFrame={
+        presetId:id,
+        frameIndex:index,
+        state:animatedPresetFrame(id,index),
+        completedAt:presetEffectLastFrameAt
+      };
+      const feedbackReference=runMesh.lastAnimationFeedbackProgressAt||runMesh.animationStartedAt;
+      const feedbackProgressAge=feedbackReference?Date.now()-feedbackReference:0;
+      const localWritesSinceFeedbackProgress=runMesh.animationLocalWriteCount-runMesh.animationLocalWritesAtLastFeedbackProgress;
+      if(feedbackProgressAge>=3000&&localWritesSinceFeedbackProgress>=4&&!runMesh.animationFeedbackStalled){
+        runMesh.animationFeedbackStalled=true;
+        runMesh.animationFeedbackStalledSince=Date.now();
+        diagnosticLog("RX","ANIMATION_DEVICE_FEEDBACK_STALLED",{
+          presetId:id,
+          meaning:"device-reported control state stopped changing while local targets continued",
+          feedbackProgressAgeMs:feedbackProgressAge,
+          lastFeedbackAgeMs:runMesh.lastAnimationFeedbackAt?Date.now()-runMesh.lastAnimationFeedbackAt:null,
+          localWritesSinceFeedbackProgress,
+          localWriteCount:runMesh.animationLocalWriteCount,
+          deviceFeedbackCount:runMesh.animationFeedbackCount,
+          deviceFeedbackChangeCount:runMesh.animationFeedbackChangeCount,
+          repeatedFeedbackCount:runMesh.animationRepeatedFeedbackCount,
+          lastLocalFrame:runMesh.lastAnimationLocalFrame
+        },"WARN");
+      }
+      armPresetEffectWatchdog(generation,runMesh,id);
+      return true;
+    }catch(error){
+      presetEffectConsecutiveFailures++;
+      const canRetry=attempt<ANIMATION_RETRY_DELAYS.length && error?.name!=="TimeoutError" &&
+        presetEffectIsCurrent(generation,runMesh,id);
+      if(!canRetry){
+        if(error?.name!=="TimeoutError"&&presetEffectIsCurrent(generation,runMesh,id)){
+          diagnosticLog("PRESET","ANIMATION_RETRY_EXHAUSTED",{presetId:id,frameIndex:index,attempts:attempt+1},"ERROR");
+          stopPresetEffect("animation retries exhausted",{deferWakeRelease:true});
+          connectionReady=false;
+          runMesh.disconnect("animation retries exhausted");
+          releasePresetEffectWakeLock({immediateScreenDim:true});
+          updateControlAvailability();
+        }
+        throw error;
+      }
+      const retryDelay=ANIMATION_RETRY_DELAYS[attempt];
+      diagnosticLog("PRESET","ANIMATION_FRAME_RETRY",{presetId:id,frameIndex:index,attempt:attempt+2,delayMs:retryDelay,consecutiveFailures:presetEffectConsecutiveFailures},"WARN");
+      await sleep(retryDelay);
+    }
+  }
+  return false;
+}
 function schedulePresetEffect(generation,runMesh,id,index){
   if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+  presetEffectNextFrameIndex=index;
   presetEffectTimer=setTimeout(()=>{
     presetEffectTimer=null;
     if(!presetEffectIsCurrent(generation,runMesh,id)) return;
@@ -1203,8 +1587,7 @@ function schedulePresetEffect(generation,runMesh,id,index){
         diagnosticLog("PRESET","ANIMATION_FRAME_ABORTED",{presetId:id,frameIndex:index,reason:"preset or connection changed"});
         return false;
       }
-      await sendAnimatedPresetFrame(runMesh,id,index);
-      return true;
+      return sendAnimatedPresetFrame(runMesh,id,index,generation);
     });
     if(queued) queued.then(succeeded=>{
       if(!succeeded){
@@ -1216,21 +1599,61 @@ function schedulePresetEffect(generation,runMesh,id,index){
         if(nextIndex===0){
           const cycle=(runMesh.animationCycleCounts[id]||0)+1;
           runMesh.animationCycleCounts[id]=cycle;
-          if(cycle===1||cycle%5===0) diagnosticLog("PRESET","ANIMATION_HEARTBEAT",{presetId:id,completedCycles:cycle,framesPerCycle:animatedPresetFrameCount(id)});
+          if(cycle===1||cycle%5===0){
+            diagnosticLog("PRESET","ANIMATION_HEARTBEAT",{
+              presetId:id,
+              completedCycles:cycle,
+              framesPerCycle:animatedPresetFrameCount(id),
+              localWriteCount:runMesh.animationLocalWriteCount,
+              deviceFeedbackCount:runMesh.animationFeedbackCount,
+              deviceFeedbackChangeCount:runMesh.animationFeedbackChangeCount,
+              deviceFeedbackAgeMs:runMesh.lastAnimationFeedbackAt?Date.now()-runMesh.lastAnimationFeedbackAt:null,
+              deviceFeedbackProgressAgeMs:runMesh.lastAnimationFeedbackProgressAt?Date.now()-runMesh.lastAnimationFeedbackProgressAt:null
+            });
+          }
         }
         schedulePresetEffect(generation,runMesh,id,nextIndex);
       }
     });
   },animatedPresetDelay(id));
 }
+function beginPresetEffect(generation,runMesh,id,nextIndex,source){
+  if(!presetEffectIsCurrent(generation,runMesh,id)) return false;
+  runMesh.animationCycleCounts[id]=0;
+  runMesh.animationStartedAt=Date.now();
+  runMesh.animationLocalWriteCount=0;
+  runMesh.lastAnimationLocalFrame=null;
+  runMesh.animationFeedbackCount=0;
+  runMesh.animationFeedbackChangeCount=0;
+  runMesh.animationRepeatedFeedbackCount=0;
+  runMesh.animationLocalWritesAtLastFeedbackProgress=0;
+  runMesh.lastAnimationFeedbackAt=0;
+  runMesh.lastAnimationFeedbackProgressAt=0;
+  runMesh.lastAnimationFeedback=null;
+  runMesh.animationFeedbackStalled=false;
+  runMesh.animationFeedbackStalledSince=0;
+  activeAnimatedPresetId=id;
+  presetEffectLastFrameAt=Date.now();
+  presetEffectConsecutiveFailures=0;
+  diagnosticLog("PRESET","ANIMATION_START",{presetId:id,frameCount:animatedPresetFrameCount(id),delayMs:animatedPresetDelay(id),source});
+  keepPresetEffectAwake(generation);
+  armPresetEffectWatchdog(generation,runMesh,id);
+  schedulePresetEffect(generation,runMesh,id,nextIndex);
+  return true;
+}
 function applyPreset(id,source="UI"){
-  stopPresetEffect("apply another preset");
+  const animated=isAnimatedPreset(id);
+  stopPresetEffect("apply another preset",{preserveScreenDim:animated});
   const generation=presetEffectGeneration;
   const runMesh=mesh;
-  const animated=isAnimatedPreset(id);
   diagnosticLog("PRESET","APPLY_REQUEST",{presetId:id,label:PRESETS.find(([presetId])=>presetId===id)?.[1]||"Unknown",animated,source,deviceConfirmed:false});
-  const queued=cmd(async()=>{
-    if(mesh!==runMesh || !runMesh?.sessionKey || !runMesh.device?.gatt?.connected){
+  if(!powerOn||activeMode!==MODE_PRESET){
+    diagnosticLog("PRESET","APPLY_ABORTED",{presetId:id,reason:!powerOn?"power is off":"preset mode is inactive"},"WARN");
+    if(animated) releasePresetEffectWakeLock();
+    return Promise.resolve(false);
+  }
+  const queued=cmd(async queuedMesh=>{
+    if(queuedMesh!==runMesh || mesh!==runMesh || activeMode!==MODE_PRESET || activePresetId!==id || !powerOn){
       diagnosticLog("PRESET","APPLY_ABORTED",{presetId:id,reason:"connection changed before command"});
       return false;
     }
@@ -1239,71 +1662,194 @@ function applyPreset(id,source="UI"){
         diagnosticLog("PRESET","APPLY_ABORTED",{presetId:id,reason:"preset or tab changed before first frame"});
         return false;
       }
-      await sendAnimatedPresetFrame(runMesh,id,0);
+      const sent=await sendAnimatedPresetFrame(runMesh,id,0,generation);
+      if(!sent) return false;
     }else{
       await runMesh.loadScene(id);
     }
-    runMesh.presetStateSource="app-commanded";
+    markAppliedOutput(runMesh,{mode:MODE_PRESET,presetId:id,manual:null},source);
     diagnosticLog("PRESET","APPLY_COMPLETED",{presetId:id,animated,source,deviceConfirmed:false});
     return true;
   });
   if(animated && queued){
-    runMesh.animationCycleCounts[id]=0;
-    activeAnimatedPresetId=id;
-    diagnosticLog("PRESET","ANIMATION_START",{presetId:id,frameCount:animatedPresetFrameCount(id),delayMs:animatedPresetDelay(id)});
-    keepPresetEffectAwake(generation);
     queued.then(succeeded=>{
       if(!succeeded){
-        if(presetEffectIsCurrent(generation,runMesh,id)) stopPresetEffect("initial animation write failed");
+        if(presetEffectIntentIsCurrent(generation,id)) stopPresetEffect("initial animation write failed");
         return;
       }
-      if(presetEffectIsCurrent(generation,runMesh,id)){
-        schedulePresetEffect(generation,runMesh,id,1);
-      }
+      beginPresetEffect(generation,runMesh,id,1,source);
     });
   }
   return queued;
 }
-function selectPreset(id,send=true,source="user"){
-  setPresetSelection(id,source);
-  if(send) applyPreset(id,source);
-  else stopPresetEffect("preset selected without sending");
-}
 function hidePresetSelection(){
-  document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#presets button').forEach(button=>{
+    button.classList.remove('active');
+    button.setAttribute("aria-pressed","false");
+  });
 }
-function activateTab(tabId){
-  const previousTab=document.querySelector('.tab-button.active')?.dataset.tab||"unknown";
-  diagnosticLog("UI","TAB_CHANGE",{previous:previousTab,next:tabId});
-  document.querySelectorAll('.tab-button').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.tab===tabId);
+function renderActiveMode(){
+  const tabId=activeMode===MODE_MANUAL?'lightControlTab':'presetsTab';
+  document.querySelectorAll('.tab-button').forEach(button=>{
+    const selected=button.dataset.tab===tabId;
+    button.classList.toggle('active',selected);
+    button.setAttribute("aria-selected",String(selected));
+    button.tabIndex=selected?0:-1;
   });
   document.querySelectorAll('.tab-panel').forEach(panel=>{
-    panel.classList.toggle('active', panel.id===tabId);
+    const selected=panel.id===tabId;
+    panel.classList.toggle('active',selected);
+    panel.setAttribute("aria-hidden",String(!selected));
   });
-  if(tabId==='lightControlTab') sendColor("light control tab opened");
-  if(tabId==='presetsTab'){
-    const presetId=activePresetId;
-    setPresetSelection(presetId,"presets tab restore");
-    applyPreset(presetId,"presets tab restore");
+  if(activeMode===MODE_PRESET) renderPresetSelection();
+  else hidePresetSelection();
+}
+function restoreDesiredFromApplied(runMesh,fallbackPlan,reason){
+  const applied=runMesh?.appliedState;
+  if(applied?.mode===MODE_MANUAL&&applied.manual){
+    activeMode=MODE_MANUAL;
+    restoreManualSnapshot(applied.manual);
+  }else if(applied?.mode===MODE_PRESET&&applied.presetId!==null){
+    activeMode=MODE_PRESET;
+    activePresetId=applied.presetId;
+    savePresetState();
+  }else if(fallbackPlan?.mode===MODE_MANUAL){
+    activeMode=MODE_MANUAL;
+    restoreManualSnapshot(fallbackPlan.manual);
+  }else{
+    activeMode=MODE_PRESET;
+    activePresetId=fallbackPlan?.presetId??DEFAULT_PRESET_ID;
+    savePresetState();
+  }
+  renderActiveMode();
+  diagnosticLog("STATE","DESIRED_STATE_ROLLED_BACK",Object.assign({reason},describeDesiredOutputPlan(captureDesiredOutputPlan())),"WARN");
+}
+function appliedOutputPlan(runMesh){
+  const applied=runMesh?.appliedState;
+  if(applied?.mode===MODE_MANUAL&&applied.manual){
+    return {mode:MODE_MANUAL,presetId:null,manual:manualSnapshot(applied.manual)};
+  }
+  if(applied?.mode===MODE_PRESET&&applied.presetId!==null){
+    return {mode:MODE_PRESET,presetId:applied.presetId,manual:null};
+  }
+  return null;
+}
+async function recoverAppliedOutput(runMesh,reason){
+  const plan=appliedOutputPlan(runMesh);
+  if(!plan||!powerOn||!isConnectedMesh(runMesh)) return false;
+  const recovered=plan.mode===MODE_MANUAL
+    ? await applyManualSnapshot(plan.manual,reason)
+    : await applyPreset(plan.presetId,reason);
+  if(recovered&&mesh===runMesh) setStatus("connected","Recovered the last applied output after a transient command failure");
+  return recovered;
+}
+async function selectPreset(id,send=true,source="user"){
+  const runMesh=mesh;
+  const fallbackPlan=captureDesiredOutputPlan();
+  const revision=++desiredRevision;
+  activeMode=MODE_PRESET;
+  setPresetSelection(id,source,false);
+  renderActiveMode();
+  if(!send){
+    savePresetState();
+    stopPresetEffect("preset selected without sending");
+    return true;
+  }
+  const succeeded=await applyPreset(id,source);
+  if(revision!==desiredRevision||mesh!==runMesh) return succeeded;
+  if(succeeded){
+    savePresetState();
+    return true;
+  }
+  restoreDesiredFromApplied(runMesh,fallbackPlan,"preset command failed");
+  await recoverAppliedOutput(runMesh,"preset rollback recovery");
+  return false;
+}
+async function activateTab(tabId){
+  const previousTab=document.querySelector('.tab-button.active')?.dataset.tab||"unknown";
+  if(previousTab===tabId) return;
+  const runMesh=mesh;
+  const fallbackPlan=captureDesiredOutputPlan();
+  const revision=++desiredRevision;
+  diagnosticLog("UI","TAB_CHANGE",{previous:previousTab,next:tabId});
+  activeMode=tabId==='lightControlTab'?MODE_MANUAL:MODE_PRESET;
+  renderActiveMode();
+  const succeeded=activeMode===MODE_MANUAL
+    ? await applyManualSnapshot(manualSnapshot(),"light control tab opened")
+    : await applyPreset(activePresetId,"presets tab restore");
+  if(revision!==desiredRevision||mesh!==runMesh) return;
+  if(!succeeded){
+    restoreDesiredFromApplied(runMesh,fallbackPlan,"tab change command failed");
+    $(activeMode===MODE_MANUAL?"lightControlTabButton":"presetsTabButton")?.focus();
+    await recoverAppliedOutput(runMesh,"tab rollback recovery");
   }
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
   btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));
+  btn.addEventListener('keydown',event=>{
+    if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key)) return;
+    const tabs=Array.from(document.querySelectorAll('.tab-button:not([disabled])'));
+    if(!tabs.length) return;
+    event.preventDefault();
+    const current=tabs.indexOf(btn);
+    const next=event.key==="Home"?tabs[0]
+      :event.key==="End"?tabs[tabs.length-1]
+      :tabs[(current+(event.key==="ArrowRight"?1:-1)+tabs.length)%tabs.length];
+    next.focus();
+    activateTab(next.dataset.tab);
+  });
 });
 if(powerToggle){
-  powerToggle.addEventListener("change", ()=>{
+  powerToggle.addEventListener("change", async()=>{
     const next = powerToggle.checked;
+    const runMesh=mesh;
+    const previousPower=powerOn;
+    const fallbackPlan=captureDesiredOutputPlan();
+    const revision=++powerRequestRevision;
     diagnosticLog("UI","POWER_TOGGLE",{previous:powerOn?"ON":"OFF",requested:next?"ON":"OFF"});
     stopPresetEffect("power toggle");
-    cmd(async ()=>{
-      await mesh.setPower(next);
-      mesh._setCommandedPowerState(next,"power toggle");
+    powerTransactionPending=true;
+    updateControlAvailability();
+    const defaultPlan={mode:MODE_PRESET,presetId:DEFAULT_PRESET_ID,manual:null};
+    const succeeded=await cmd(async queuedMesh=>{
       if(next){
-        selectPreset(DEFAULT_PRESET_ID,false,"power-on default");
-        await mesh.loadScene(DEFAULT_PRESET_ID);
+        await tryPreloadDesiredOutput(queuedMesh,defaultPlan,"power toggle");
+        await sleep(CONNECT_PRELOAD_SETTLE_MS);
+        await queuedMesh.setPower(true);
+        queuedMesh._setCommandedPowerState(true,"power toggle");
+        await writeDesiredOutput(queuedMesh,defaultPlan,"power toggle post-power restore");
+        markAppliedOutput(queuedMesh,defaultPlan,"power toggle");
+      }else{
+        await queuedMesh.setPower(false);
+        queuedMesh._setCommandedPowerState(false,"power toggle");
       }
+      return true;
     });
+    if(revision!==powerRequestRevision) return;
+    powerTransactionPending=false;
+    if(mesh!==runMesh){ updateControlAvailability(); return; }
+    if(succeeded&&next){
+      activeMode=MODE_PRESET;
+      setPresetSelection(DEFAULT_PRESET_ID,"power-on default",true);
+      renderActiveMode();
+    }else if(!succeeded){
+      powerOn=runMesh?.appliedState?.power===next?next:previousPower;
+      if(powerOn&&next){
+        activeMode=MODE_PRESET;
+        setPresetSelection(DEFAULT_PRESET_ID,"power-on partial completion",true);
+        renderActiveMode();
+      }else if(powerOn){
+        restoreDesiredFromApplied(runMesh,fallbackPlan,"power command failed");
+      }
+      syncPowerToggle();
+    }
+    updateControlAvailability();
+    if(!succeeded&&powerOn&&isConnectedMesh(runMesh)){
+      const recovered=next
+        ? await applyPreset(DEFAULT_PRESET_ID,"power-on output recovery")
+        : await recoverAppliedOutput(runMesh,"power rollback recovery");
+      if(recovered) setStatus("connected","Recovered after a transient power command failure");
+    }
   });
 }
 
@@ -1327,6 +1873,20 @@ let connectInProgress=false;
 let forceChooserNextConnect=false;
 let connectAttemptCounter=0;
 let activeConnectAttempt=null;
+let foregroundResumeDevice=null;
+let foregroundResumeWanted=false;
+let foregroundResumeGeneration=0;
+let foregroundResumeTimer=null;
+function cancelForegroundResume(reason,{clearDevice=false}={}){
+  foregroundResumeGeneration++;
+  foregroundResumeWanted=false;
+  if(foregroundResumeTimer!==null){
+    clearTimeout(foregroundResumeTimer);
+    foregroundResumeTimer=null;
+  }
+  if(clearDevice) foregroundResumeDevice=null;
+  diagnosticLog("LIFECYCLE","FOREGROUND_RESUME_CANCELLED",{reason,clearDevice});
+}
 function connectAttemptAbortError(reason){
   const error=new Error("Connection stopped because the app left the foreground. Tap Connect to retry.");
   error.name="AbortError";
@@ -1347,20 +1907,26 @@ $("connectBtn").onclick=async()=>{
   }
   if(connectInProgress){ diagnosticLog("CONNECT","CONNECT_CLICK_IGNORED",{reason:"attempt already in progress"},"WARN"); return; }
   if(mesh?.sessionKey&&mesh.device?.gatt?.connected){ setStatus("connected","Already connected"); return; }
+  cancelForegroundResume("manual Connect",{clearDevice:true});
   let selection=null;
+  let usedFallbackChooser=false;
+  let forcedChooserForAttempt=false;
   const attemptId=++connectAttemptCounter;
   const attempt={id:attemptId,cancelled:false,cancelReason:""};
   const attemptStarted=performance.now();
   activeConnectAttempt=attempt;
   connectInProgress=true;
   $("connectBtn").disabled=true;
+  $("connectBtn").setAttribute("aria-busy","true");
   try{
     diagnosticLog("CONNECT","ATTEMPT_START",{attemptId,forceChooser:forceChooserNextConnect});
     stopPresetEffect();
-    $("controls").classList.remove("ready");
+    connectionReady=false;
+    updateControlAvailability();
     if(mesh) mesh.disconnect("new connect attempt");
     mesh=null;
     const forceChooser=forceChooserNextConnect;
+    forcedChooserForAttempt=forceChooser;
     forceChooserNextConnect=false;
     selection=await selectBluetoothDevice(forceChooser);
     if(document.hidden&&!attempt.cancelled){
@@ -1380,14 +1946,17 @@ $("connectBtn").onclick=async()=>{
       await nextMesh.connect(selection.device);
     }catch(connectError){
       const failedStage=connectError?.telinkConnectStage||nextMesh.lastConnectFailureStage;
+      const retryableNativeStage=["gatt connect","service discovery","characteristic discovery"].includes(failedStage);
       const canUseChooserFallback=selection.remembered&&connectError?.name!=="AbortError"&&
-        failedStage==="gatt connect"&&!attempt.cancelled;
+        connectError?.name!=="TimeoutError"&&retryableNativeStage&&!attempt.cancelled&&
+        chooserCanOpenFromCurrentGesture();
       if(!canUseChooserFallback) throw connectError;
       diagnosticLog("CONNECT","REMEMBERED_GATT_CHOOSER_FALLBACK",{
         attemptId,reason:connectError?.message||String(connectError),device:diagnosticDeviceRef(selection.device)
       },"WARN");
       mesh=null; // Native picker visibility changes must not cancel this attempt.
       selection=null;
+      usedFallbackChooser=true;
       try{
         selection=await selectBluetoothDevice(true);
       }catch(chooserError){
@@ -1412,19 +1981,28 @@ $("connectBtn").onclick=async()=>{
     if(attempt.cancelled){ nextMesh.disconnect("cancelled after GATT connect"); assertConnectAttemptActive(attempt,"after GATT connect"); }
     saveBluetoothDevice(nextMesh.device);
     syncPowerToggle();
+    connectionReady=true;
+    updateControlAvailability();
+    finalizeRestoredOutput(nextMesh);
     diagnosticLog("CONNECT","ATTEMPT_SUCCESS",{attemptId,durationMs:Math.round(performance.now()-attemptStarted),source:selection.source,powerKnown:nextMesh.powerStateKnown,power:powerOn?"ON":"OFF",presetId:activePresetId,presetSource:nextMesh.presetStateSource});
     setStatus("connected","Connection and Telink login completed");
-    $("controls").classList.add("ready");
   }catch(e){
     const failedConnectStage=e?.telinkConnectStage||mesh?.lastConnectFailureStage||"unknown";
     if(mesh){ mesh.disconnect("connect handler error cleanup"); mesh=null; }
+    connectionReady=false;
+    powerTransactionPending=false;
+    updateControlAvailability();
     const message=e.message||String(e);
     if(attempt.cancelled){
       diagnosticLog("CONNECT","ATTEMPT_CANCELLED_BY_LIFECYCLE",{attemptId,reason:attempt.cancelReason,durationMs:Math.round(performance.now()-attemptStarted)},"WARN");
       setStatus("idle","Connection stopped for "+attempt.cancelReason);
     }else{
       diagnosticError("CONNECT","ATTEMPT_FAILED",e,{attemptId,durationMs:Math.round(performance.now()-attemptStarted),selectionSource:selection?.source||"none",connectStage:failedConnectStage});
-      if(!selection&&e.name==="NotFoundError") setStatus("idle","Device chooser cancelled");
+      if(e?.requiresChooserTap||usedFallbackChooser) forceChooserNextConnect=true;
+      if(!selection&&e.name==="NotFoundError"){
+        if(forcedChooserForAttempt) forceChooserNextConnect=true;
+        setStatus("idle","Device chooser cancelled");
+      }
       else if(selection?.remembered&&!message.startsWith("Light rejected pairing")){
         forceChooserNextConnect=true;
         diagnosticLog("CONNECT","FORCE_CHOOSER_ARMED",{attemptId,reason:message},"WARN");
@@ -1435,34 +2013,141 @@ $("connectBtn").onclick=async()=>{
     if(activeConnectAttempt===attempt) activeConnectAttempt=null;
     connectInProgress=false;
     $("connectBtn").disabled=false;
+    $("connectBtn").removeAttribute("aria-busy");
   }
 };
 
-// Serialize commands through a promise chain: every tap is sent in the
-// order it happened, none dropped. The old version dropped any command
-// that arrived while another was in flight (the "busy" guard), which is
-// what caused rapid switching to desync the lamp from the UI.
-let cmdChain=Promise.resolve();
-function cmd(fn){
-  if(!mesh||!mesh.sessionKey){
-    diagnosticLog("TX","COMMAND_REJECTED",{reason:"no authenticated mesh session"},"WARN");
-    setStatus("error","Command requested without a connection");
+function scheduleForegroundResume(reason="page visible"){
+  if(!foregroundResumeWanted||!foregroundResumeDevice||document.hidden) return;
+  const generation=foregroundResumeGeneration;
+  if(foregroundResumeTimer!==null) clearTimeout(foregroundResumeTimer);
+  foregroundResumeTimer=setTimeout(()=>{
+    foregroundResumeTimer=null;
+    resumeAnimatedPresetInForeground(generation,reason);
+  },350);
+  diagnosticLog("LIFECYCLE","FOREGROUND_RESUME_SCHEDULED",{reason,generation,delayMs:350});
+}
+async function resumeAnimatedPresetInForeground(generation,reason){
+  if(generation!==foregroundResumeGeneration||!foregroundResumeWanted||!foregroundResumeDevice||document.hidden) return;
+  if(connectInProgress||activeConnectAttempt){
+    diagnosticLog("LIFECYCLE","FOREGROUND_RESUME_DEFERRED",{reason,generation,connectInProgress});
+    // The cancelled automatic attempt schedules the next try from its own
+    // finally block. Do not poll here while a native GATT promise unwinds.
     return;
   }
-  const queued=cmdChain.then(async()=>{
+  if(mesh?.sessionKey&&mesh.device?.gatt?.connected){
+    foregroundResumeWanted=false;
+    diagnosticLog("LIFECYCLE","FOREGROUND_RESUME_SKIPPED",{reason:"connection already restored"});
+    return;
+  }
+  const device=foregroundResumeDevice;
+  const attemptId=++connectAttemptCounter;
+  const attempt={id:attemptId,cancelled:false,cancelReason:"",automatic:true};
+  const attemptStarted=performance.now();
+  activeConnectAttempt=attempt;
+  connectInProgress=true;
+  $("connectBtn").disabled=true;
+  $("connectBtn").setAttribute("aria-busy","true");
+  diagnosticLog("CONNECT","FOREGROUND_RESUME_START",{attemptId,reason,device:diagnosticDeviceRef(device)});
+  try{
+    stopPresetEffect("foreground reconnect");
+    connectionReady=false;
+    updateControlAvailability();
+    if(mesh) mesh.disconnect("foreground reconnect replacement");
+    const nextMesh=new TelinkMesh();
+    mesh=nextMesh;
+    await nextMesh.connect(device,{assertPower:false,connectionReason:"foreground resume"});
+    assertConnectAttemptActive(attempt,"foreground GATT restore");
+    if(document.hidden){
+      attempt.cancelled=true;
+      attempt.cancelReason="app hidden during foreground reconnect";
+      nextMesh.disconnect(attempt.cancelReason);
+      assertConnectAttemptActive(attempt,"foreground visibility check");
+    }
+    saveBluetoothDevice(nextMesh.device);
+    syncPowerToggle();
+    connectionReady=true;
+    updateControlAvailability();
+    finalizeRestoredOutput(nextMesh);
+    foregroundResumeWanted=false;
+    diagnosticLog("CONNECT","FOREGROUND_RESUME_SUCCESS",{
+      attemptId,
+      durationMs:Math.round(performance.now()-attemptStarted),
+      presetId:activePresetId,
+      power:powerOn?"ON":"OFF"
+    });
+    setStatus("connected","Animated preset resumed after returning to Bluefy");
+  }catch(error){
+    if(mesh){ mesh.disconnect("foreground reconnect cleanup"); mesh=null; }
+    connectionReady=false;
+    powerTransactionPending=false;
+    updateControlAvailability();
+    if(attempt.cancelled||document.hidden){
+      diagnosticLog("CONNECT","FOREGROUND_RESUME_INTERRUPTED",{
+        attemptId,
+        reason:attempt.cancelReason||"page hidden",
+        durationMs:Math.round(performance.now()-attemptStarted)
+      },"WARN");
+      setStatus("idle","Foreground reconnect paused");
+    }else{
+      foregroundResumeWanted=false;
+      foregroundResumeDevice=null;
+      forceChooserNextConnect=true;
+      diagnosticError("CONNECT","FOREGROUND_RESUME_FAILED",error,{
+        attemptId,
+        stage:error?.telinkConnectStage||"unknown",
+        durationMs:Math.round(performance.now()-attemptStarted),
+        fallback:"Tap Connect to choose BlissLights"
+      });
+      setStatus("error",error?.message||String(error));
+    }
+  }finally{
+    if(activeConnectAttempt===attempt) activeConnectAttempt=null;
+    connectInProgress=false;
+    $("connectBtn").disabled=false;
+    $("connectBtn").removeAttribute("aria-busy");
+    if(!document.hidden&&foregroundResumeWanted) scheduleForegroundResume("interrupted attempt finished");
+  }
+}
+
+// Commands are serialized per authenticated mesh. Capturing both the mesh
+// and its epoch prevents a delayed command from crossing into a reconnect.
+function cmd(fn){
+  const runMesh=mesh;
+  if(!isConnectedMesh(runMesh)){
+    diagnosticLog("TX","COMMAND_REJECTED",{reason:"no authenticated mesh session"},"WARN");
+    setStatus("error","Command requested without a connection");
+    return Promise.resolve(false);
+  }
+  const epoch=runMesh.sessionEpoch;
+  runMesh.commandQueueDepth++;
+  const queued=runMesh.commandChain.then(async()=>{
     try{
-      const outcome=await fn();
+      if(mesh!==runMesh||!runMesh.isSessionCurrent(epoch)){
+        diagnosticLog("TX","STALE_COMMAND_SKIPPED",{epoch,currentEpoch:runMesh.sessionEpoch},"WARN");
+        return false;
+      }
+      const outcome=await fn(runMesh,epoch);
       if(outcome===false) return false;
+      if(mesh!==runMesh||!runMesh.isSessionCurrent(epoch)){
+        diagnosticLog("TX","COMMAND_COMPLETED_STALE",{epoch,currentEpoch:runMesh.sessionEpoch},"WARN");
+        return false;
+      }
+      if($("status").textContent==="Can't connect"){
+        setStatus("connected","A later command succeeded after a transient failure");
+      }
       await sleep(25); // small gap so writes don't stampede
       return true;
     }
     catch(e){
       if(!e?.skyliteDiagnosticLogged) diagnosticError("TX","COMMAND_QUEUE_FAILED",e);
-      setStatus("error","Send failed: "+(e.message||e));
+      if(mesh===runMesh) setStatus("error","Send failed: "+(e.message||e));
       return false;
+    }finally{
+      runMesh.commandQueueDepth=Math.max(0,runMesh.commandQueueDepth-1);
     }
   });
-  cmdChain=queued.then(()=>undefined);
+  runMesh.commandChain=queued.then(()=>undefined,()=>undefined);
   return queued;
 }
 
@@ -1476,45 +2161,143 @@ const BRIGHT_ICONS={
   medium:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 4h.01"/><path d="M20 12h.01"/><path d="M12 20h.01"/><path d="M4 12h.01"/><path d="M17.657 6.343h.01"/><path d="M17.657 17.657h.01"/><path d="M6.343 17.657h.01"/><path d="M6.343 6.343h.01"/></svg>',
   high:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>'
 };
+function manualSnapshot(value=st){
+  return {r:!!value.r,g:!!value.g,b:!!value.b,laser:!!value.laser,bright:Number(value.bright),motor:value.motor?255:0};
+}
+function restoreManualSnapshot(snapshot){
+  if(!snapshot) return;
+  st.r=!!snapshot.r; st.g=!!snapshot.g; st.b=!!snapshot.b; st.laser=!!snapshot.laser;
+  st.bright=Number(snapshot.bright); st.motor=snapshot.motor?255:0;
+  refreshManualUI();
+}
+function captureDesiredOutputPlan(){
+  return activeMode===MODE_MANUAL
+    ? {mode:MODE_MANUAL,presetId:null,manual:manualSnapshot()}
+    : {mode:MODE_PRESET,presetId:activePresetId,manual:null};
+}
+function describeDesiredOutputPlan(plan){
+  if(plan.mode===MODE_MANUAL) return {mode:MODE_MANUAL,manual:plan.manual};
+  return {
+    mode:MODE_PRESET,
+    presetId:plan.presetId,
+    preset:PRESETS.find(([id])=>id===plan.presetId)?.[1]||"Unknown",
+    animated:isAnimatedPreset(plan.presetId)
+  };
+}
+async function writeDesiredOutput(runMesh,plan,reason){
+  diagnosticLog("STATE","DESIRED_OUTPUT_WRITE",Object.assign({reason},describeDesiredOutputPlan(plan)));
+  if(plan.mode===MODE_MANUAL){
+    const manual=plan.manual;
+    return runMesh.setColor(
+      manual.r?255:0,manual.g?255:0,manual.b?255:0,
+      BRIGHT_VALUES[manual.bright],manual.laser?255:0,manual.motor
+    );
+  }
+  if(isAnimatedPreset(plan.presetId)) return writeAnimatedPresetFrame(runMesh,plan.presetId,0);
+  return runMesh.loadScene(plan.presetId);
+}
+async function tryPreloadDesiredOutput(runMesh,plan,reason){
+  diagnosticLog("STATE","OUTPUT_PRELOAD_START",Object.assign({reason},describeDesiredOutputPlan(plan)));
+  try{
+    await writeDesiredOutput(runMesh,plan,"preload");
+    diagnosticLog("STATE","OUTPUT_PRELOAD_DONE",Object.assign({deviceConfirmed:false},describeDesiredOutputPlan(plan)));
+    return true;
+  }catch(error){
+    const sessionHealthy=!!runMesh.sessionKey&&!!runMesh.device?.gatt?.connected;
+    diagnosticError("STATE","OUTPUT_PRELOAD_FAILED",error,{sessionHealthy,willContinue:sessionHealthy&&error?.name!=="TimeoutError"});
+    if(!sessionHealthy||error?.name==="TimeoutError") throw error;
+    return false;
+  }
+}
+function markAppliedOutput(runMesh,plan,reason){
+  runMesh.appliedState.mode=plan.mode;
+  runMesh.appliedState.presetId=plan.mode===MODE_PRESET?plan.presetId:null;
+  runMesh.appliedState.manual=plan.mode===MODE_MANUAL?manualSnapshot(plan.manual):null;
+  runMesh.presetStateSource="app-commanded";
+  diagnosticLog("STATE","OUTPUT_APPLIED_BY_WRITE",Object.assign({reason,deviceConfirmed:false},describeDesiredOutputPlan(plan)));
+}
+function finalizeRestoredOutput(runMesh){
+  const plan=runMesh.restoredOutputPlan;
+  if(!plan||!isConnectedMesh(runMesh)) return;
+  renderActiveMode();
+  if(plan.mode===MODE_PRESET&&isAnimatedPreset(plan.presetId)){
+    beginPresetEffect(presetEffectGeneration,runMesh,plan.presetId,1,"successful Connect restore");
+  }else{
+    stopPresetEffect("connected static output");
+  }
+  runMesh.restoredOutputPlan=null;
+}
 
 // build preset buttons (single-select, with a check marker on the right)
 PRESETS.forEach(([id,label])=>{
   const b=document.createElement('button');
+  b.type="button";
   b.dataset.presetId = id;
-  b.innerHTML=`<span>${label}</span><span class="check">✓</span>`;
+  b.setAttribute("aria-pressed","false");
+  b.innerHTML=`<span>${label}</span><span class="check" aria-hidden="true">✓</span>`;
   b.onclick=()=> selectPreset(id,true,"preset button");
   $("presets").appendChild(b);
 });
-setPresetSelection(activePresetId,"storage restore");
+setPresetSelection(activePresetId,"storage restore",false);
 
-// full-state color command (0x47) -- always sends every field
-function sendColor(reason="manual control"){
+// Full-state color command (0x47). Each queued operation owns an immutable
+// snapshot so rapid taps cannot read a later, unrelated UI state.
+function applyManualSnapshot(snapshot,reason="manual control"){
   stopPresetEffect(reason);
-  hidePresetSelection();  // custom mode hides, but remembers, the last preset
-  diagnosticLog("MANUAL","STATE_REQUEST",{reason,r:st.r,g:st.g,b:st.b,laser:st.laser,brightness:st.bright,rotation:!!st.motor,rememberedPresetId:activePresetId});
-  cmd(()=>mesh.setColor(
-    st.r?255:0, st.g?255:0, st.b?255:0,
-    BRIGHT_VALUES[st.bright], st.laser?255:0, st.motor
-  ));
+  hidePresetSelection();
+  diagnosticLog("MANUAL","STATE_REQUEST",{reason,r:snapshot.r,g:snapshot.g,b:snapshot.b,laser:snapshot.laser,brightness:snapshot.bright,rotation:!!snapshot.motor,rememberedPresetId:activePresetId});
+  if(!powerOn||activeMode!==MODE_MANUAL){
+    diagnosticLog("MANUAL","STATE_ABORTED",{reason:!powerOn?"power is off":"manual mode is inactive"},"WARN");
+    return Promise.resolve(false);
+  }
+  return cmd(async runMesh=>{
+    if(activeMode!==MODE_MANUAL||!powerOn) return false;
+    await runMesh.setColor(
+      snapshot.r?255:0,snapshot.g?255:0,snapshot.b?255:0,
+      BRIGHT_VALUES[snapshot.bright],snapshot.laser?255:0,snapshot.motor
+    );
+    markAppliedOutput(runMesh,{mode:MODE_MANUAL,presetId:null,manual:snapshot},reason);
+    return true;
+  });
+}
+async function requestManualChange(mutator,reason){
+  const runMesh=mesh;
+  const previous=manualSnapshot();
+  const fallbackPlan=captureDesiredOutputPlan();
+  const revision=++desiredRevision;
+  mutator();
+  activeMode=MODE_MANUAL;
+  refreshManualUI();
+  renderActiveMode();
+  const desired=manualSnapshot();
+  const succeeded=await applyManualSnapshot(desired,reason);
+  if(revision!==desiredRevision||mesh!==runMesh) return succeeded;
+  if(!succeeded){
+    restoreDesiredFromApplied(runMesh,Object.assign({},fallbackPlan,{manual:previous}),"manual command failed");
+    diagnosticLog("MANUAL","STATE_ROLLED_BACK",{reason,mode:activeMode,restored:manualSnapshot()},"WARN");
+    await recoverAppliedOutput(runMesh,"manual rollback recovery");
+  }
+  return succeeded;
 }
 
 // --- Colors: 3 independent on/off channels + laser ---
 document.querySelectorAll("#colorChips button").forEach(chip=>{
   const ch=chip.dataset.ch;
+  chip.type="button";
+  chip.querySelector(".check")?.setAttribute("aria-hidden","true");
   chip.classList.toggle("active",st[ch]);
-  chip.onclick=()=>{ st[ch]=!st[ch]; chip.classList.toggle("active",st[ch]); sendColor("color "+ch+" changed"); };
+  chip.setAttribute("aria-pressed",String(!!st[ch]));
+  chip.onclick=()=>requestManualChange(()=>{ st[ch]=!st[ch]; },"color "+ch+" changed");
 });
 
 // --- Brightness: three single-select buttons ---
 Object.entries(BRIGHT_NAMES).forEach(([value,label])=>{
   const button=document.createElement("button");
+  button.type="button";
   button.dataset.brightness=value;
-  button.innerHTML=`<span class="color-label">${BRIGHT_ICONS[label.toLowerCase()]}${label}</span><span class="check">✓</span>`;
-  button.onclick=()=>{
-    st.bright=Number(value);
-    refreshManualUI();
-    sendColor("brightness changed to "+label);
-  };
+  button.setAttribute("aria-pressed","false");
+  button.innerHTML=`<span class="color-label">${BRIGHT_ICONS[label.toLowerCase()]}${label}</span><span class="check" aria-hidden="true">✓</span>`;
+  button.onclick=()=>requestManualChange(()=>{ st.bright=Number(value); },"brightness changed to "+label);
   $("brightnessOptions").appendChild(button);
 });
 refreshManualUI();
@@ -1522,10 +2305,11 @@ refreshManualUI();
 // This firmware ignores the nominal dedicated motor command, so rotation
 // is sent in the same complete state packet as the other manual controls.
 $("rotationToggle").addEventListener("change",()=>{
-  st.motor = $("rotationToggle").checked ? 255 : 0;
-  refreshManualUI();
-  sendColor("rotation changed to "+(st.motor?"ON":"OFF"));
+  const requested=$("rotationToggle").checked;
+  requestManualChange(()=>{ st.motor=requested?255:0; },"rotation changed to "+(requested?"ON":"OFF"));
 });
+renderActiveMode();
+updateControlAvailability();
 
 // --- Full-screen diagnostic log ---
 function currentDiagnosticSnapshot(){
@@ -1533,20 +2317,60 @@ function currentDiagnosticSnapshot(){
   const gattConnected=!!mesh?.device?.gatt?.connected;
   const preset=PRESETS.find(([id])=>id===activePresetId);
   const activeTab=document.querySelector('.tab-button.active')?.dataset.tab||"unknown";
+  const desiredOutput=activeMode===MODE_PRESET
+    ? {type:MODE_PRESET,preset:preset?.[1]||String(activePresetId),presetId:activePresetId}
+    : {type:MODE_MANUAL,state:manualSnapshot(),rememberedPreset:preset?.[1]||String(activePresetId),rememberedPresetId:activePresetId};
+  const animationMetricsActive=connected&&activeAnimatedPresetId!==null;
   return {
     connection:connected?"CONNECTED":(gattConnected?"GATT ONLY":"DISCONNECTED"),
     power:powerOn?"ON":"OFF",
     powerSource:connected&&mesh?.powerStateKnown?mesh.powerStateSource:"stored/UI; not device-confirmed",
+    mode:activeMode,
+    output:desiredOutput,
     preset:preset?.[1]||String(activePresetId),
     presetId:activePresetId,
     presetSource:connected&&mesh?.presetStateSource==="app-commanded"?"app-commanded":"stored/UI; not device-confirmed",
     tab:activeTab,
     manual:{r:st.r,g:st.g,b:st.b,laser:st.laser,brightness:st.bright,rotation:!!st.motor},
+    applied:connected?Object.assign({meaning:"Bluetooth write completed; not hardware-confirmed"},mesh.appliedState):null,
+    commandQueueDepth:mesh?.commandQueueDepth||0,
+    animation:{
+      presetId:activeAnimatedPresetId,
+      generation:presetEffectGeneration,
+      lastLocalWriteCompletedAt:presetEffectLastFrameAt?new Date(presetEffectLastFrameAt).toISOString():null,
+      localWriteCount:animationMetricsActive?(mesh?.animationLocalWriteCount||0):0,
+      lastLocalFrame:animationMetricsActive?(mesh?.lastAnimationLocalFrame||null):null,
+      deviceFeedbackCount:animationMetricsActive?(mesh?.animationFeedbackCount||0):0,
+      deviceFeedbackChangeCount:animationMetricsActive?(mesh?.animationFeedbackChangeCount||0):0,
+      repeatedDeviceFeedbackCount:animationMetricsActive?(mesh?.animationRepeatedFeedbackCount||0):0,
+      lastDeviceFeedbackAt:animationMetricsActive&&mesh?.lastAnimationFeedbackAt?new Date(mesh.lastAnimationFeedbackAt).toISOString():null,
+      deviceFeedbackAgeMs:animationMetricsActive&&mesh?.lastAnimationFeedbackAt?Date.now()-mesh.lastAnimationFeedbackAt:null,
+      lastDeviceFeedbackProgressAt:animationMetricsActive&&mesh?.lastAnimationFeedbackProgressAt?new Date(mesh.lastAnimationFeedbackProgressAt).toISOString():null,
+      deviceFeedbackProgressAgeMs:animationMetricsActive&&mesh?.lastAnimationFeedbackProgressAt?Date.now()-mesh.lastAnimationFeedbackProgressAt:null,
+      lastDeviceFeedback:animationMetricsActive?(mesh?.lastAnimationFeedback||null):null,
+      deviceFeedbackStalled:animationMetricsActive&&!!mesh?.animationFeedbackStalled,
+      consecutiveFailures:presetEffectConsecutiveFailures,
+      frameInFlight:presetEffectFrameInFlight,
+      frameInFlightSince:presetEffectFrameStartedAt?new Date(presetEffectFrameStartedAt).toISOString():null,
+      wakeLock:!!presetEffectWakeLock,
+      bluefyScreenDimDisabled,
+      bluefyScreenDimDesiredEnabled
+    },
+    controls:{connectionReady,settingsEnabled:connectionReady&&powerOn,powerTransactionPending},
+    foregroundResume:{wanted:foregroundResumeWanted,deviceRetained:!!foregroundResumeDevice,generation:foregroundResumeGeneration},
     visibility:document.visibilityState,
     forceChooserNextConnect,
+    rememberedDeviceApi:typeof navigator.bluetooth?.getDevices==="function",
     logPersistence:diagnosticPersistenceState,
     logPersistenceError:diagnosticPersistenceError||null
   };
+}
+function diagnosticOutputMatchesApplied(state){
+  if(!state.applied||state.applied.mode!==state.mode) return false;
+  if(state.mode===MODE_PRESET) return state.applied.presetId===state.output.presetId;
+  const desired=state.output.state;
+  const applied=state.applied.manual;
+  return !!applied&&["r","g","b","laser","bright","motor"].every(key=>applied[key]===desired[key]);
 }
 function updateDiagnosticSummary(){
   const summary=$("diagnosticsSummary");
@@ -1555,8 +2379,8 @@ function updateDiagnosticSummary(){
   summary.innerHTML=
     '<div><span>Connection</span><strong>'+state.connection+'</strong></div>'+
     '<div><span>Power</span><strong>'+state.power+' · '+(state.powerSource==="device-reported"?'device':state.powerSource==="app-commanded"?'app command':'cached')+'</strong></div>'+
-    '<div><span>Preset</span><strong>'+state.preset+'</strong></div>'+
-    '<div><span>Preset source</span><strong>'+(state.presetSource==="app-commanded"?'app command':'UI only · unconfirmed')+'</strong></div>';
+    '<div><span>Output</span><strong>'+(state.mode===MODE_MANUAL?'Light Control':state.preset)+'</strong></div>'+
+    '<div><span>Output source</span><strong>'+(diagnosticOutputMatchesApplied(state)?'app command':'UI only · unconfirmed')+'</strong></div>';
 }
 function buildDiagnosticReport(){
   const state=currentDiagnosticSnapshot();
@@ -1567,7 +2391,7 @@ function buildDiagnosticReport(){
     "Session: "+diagnosticSessionId,
     "Log persistence: "+diagnosticPersistenceState+(diagnosticPersistenceError?" ("+diagnosticPersistenceError+")":""),
     "Current state: "+JSON.stringify(state),
-    "Important: power and preset sources indicate whether the displayed state was reported, commanded by this app, or only restored from storage.",
+    "Important: applied means the Bluetooth write completed; device feedback is still not proof that the LEDs visibly changed.",
     "Bluetooth identifiers use session-local aliases. Passwords, login challenges and session keys are excluded.",
     "",
     "--- SAVED EVENTS (oldest to newest) ---",
@@ -1609,6 +2433,7 @@ function fallbackCopyDiagnosticText(text){
   if(!copied) throw new Error("Clipboard copy was rejected");
 }
 async function copyDiagnostics(){
+  mesh?._flushAnimationNotificationSummary?.("diagnostic report copied");
   diagnosticLog("DIAG","COPY_REQUESTED",currentDiagnosticSnapshot());
   const report=buildDiagnosticReport();
   try{
@@ -1666,25 +2491,49 @@ function releaseLamp(reason="unknown lifecycle event"){
     return;
   }
   lastLampReleaseAt=now;
-  diagnosticLog("LIFECYCLE","RELEASE_START",Object.assign({reason},currentDiagnosticSnapshot()));
-  stopPresetEffect("lifecycle: "+reason);
+  const releaseSnapshot=currentDiagnosticSnapshot();
+  const resumableLifecycleReason=reason==="visibility hidden"||reason==="pagehide persisted";
+  const canResumeAnimatedPreset=resumableLifecycleReason&&connectionReady&&!powerTransactionPending&&
+    powerOn&&activeAnimatedPresetId!==null&&!!mesh?.sessionKey&&!!mesh?.device;
+  if(resumableLifecycleReason){
+    foregroundResumeGeneration++;
+    if(foregroundResumeTimer!==null){ clearTimeout(foregroundResumeTimer); foregroundResumeTimer=null; }
+    if(canResumeAnimatedPreset){
+      foregroundResumeDevice=mesh.device;
+      foregroundResumeWanted=true;
+      diagnosticLog("LIFECYCLE","FOREGROUND_RESUME_ARMED",{
+        generation:foregroundResumeGeneration,
+        presetId:activePresetId,
+        device:diagnosticDeviceRef(foregroundResumeDevice)
+      });
+    }
+  }
   const selectionMayBeUsingNativePicker=reason==="visibility hidden"&&!mesh;
   const hadPendingAttempt=!!(activeConnectAttempt&&!activeConnectAttempt.cancelled&&!selectionMayBeUsingNativePicker);
   if(hadPendingAttempt){
     activeConnectAttempt.cancelled=true;
     activeConnectAttempt.cancelReason=reason;
+  }
+  stopPresetEffect("lifecycle: "+reason,{deferWakeRelease:true});
+  const wasConnected=!!(mesh?.sessionKey||mesh?.device?.gatt?.connected);
+  connectionReady=false;
+  // Releasing GATT is the first native operation. Storage and screen APIs can
+  // be slow or ignored while Bluefy is already moving into the background.
+  try{ if(mesh) mesh.disconnect("lifecycle: "+reason); }
+  catch(e){ diagnosticError("LIFECYCLE","RELEASE_DISCONNECT_FAILED",e,{reason}); }
+  releasePresetEffectWakeLock({immediateScreenDim:true});
+  diagnosticLog("LIFECYCLE","RELEASE_START",Object.assign({reason},releaseSnapshot));
+  if(hadPendingAttempt){
     diagnosticLog("CONNECT","ATTEMPT_CANCEL_REQUESTED",{attemptId:activeConnectAttempt.id,reason},"WARN");
   }else if(activeConnectAttempt&&!activeConnectAttempt.cancelled&&selectionMayBeUsingNativePicker){
     diagnosticLog("CONNECT","SELECTION_CANCEL_DEFERRED",{attemptId:activeConnectAttempt.id,reason:"native picker may have hidden the page"});
   }
-  const wasConnected=!!(mesh?.sessionKey||mesh?.device?.gatt?.connected);
-  try{ if(mesh) mesh.disconnect("lifecycle: "+reason); }
-  catch(e){ diagnosticError("LIFECYCLE","RELEASE_DISCONNECT_FAILED",e,{reason}); }
   if(wasConnected||hadPendingAttempt){
     setStatus("idle","Disconnected for "+reason);
-    $("controls").classList.remove("ready");
   }
-  diagnosticLog("LIFECYCLE","RELEASE_DONE",{reason,wasConnected,hadPendingAttempt,gattConnected:!!mesh?.device?.gatt?.connected,sessionPresent:!!mesh?.sessionKey,gattReleased:!mesh?.device?.gatt?.connected&&!mesh?.sessionKey,pendingAttemptPresent:!!activeConnectAttempt});
+  updateControlAvailability();
+  diagnosticLog("LIFECYCLE","RELEASE_DONE",{reason,wasConnected,hadPendingAttempt,gattConnected:!!mesh?.device?.gatt?.connected,sessionPresent:!!mesh?.sessionKey,gattReleased:!mesh?.device?.gatt?.connected&&!mesh?.sessionKey,pendingAttemptPresent:!!activeConnectAttempt,foregroundResumeWanted});
+  scheduleDiagnosticPersistence(true);
 }
 let lastLampReleaseAt=0;
 window.addEventListener("pageshow",event=>{
@@ -1692,20 +2541,25 @@ window.addEventListener("pageshow",event=>{
   diagnosticSessionEnded=false;
   markDiagnosticSessionActive();
   diagnosticLog("LIFECYCLE","PAGESHOW",{persisted:!!event.persisted,visibility:document.visibilityState});
+  if(event.persisted&&!document.hidden) scheduleForegroundResume("BFCache pageshow");
 });
 window.addEventListener("pagehide",event=>{
+  if(!event.persisted) cancelForegroundResume("pagehide",{clearDevice:true});
+  else diagnosticLog("LIFECYCLE","FOREGROUND_RESUME_PRESERVED",{reason:"BFCache pagehide"});
+  releaseLamp(event.persisted?"pagehide persisted":"pagehide");
   diagnosticLog("LIFECYCLE","PAGEHIDE",{persisted:!!event.persisted});
-  releaseLamp("pagehide");
   if(!event.persisted) endDiagnosticSession("pagehide");
 });
 window.addEventListener("beforeunload",()=>{
-  diagnosticLog("LIFECYCLE","BEFOREUNLOAD");
+  cancelForegroundResume("beforeunload",{clearDevice:true});
   releaseLamp("beforeunload");
+  diagnosticLog("LIFECYCLE","BEFOREUNLOAD");
   endDiagnosticSession("beforeunload");
 });
 document.addEventListener("visibilitychange",()=>{
-  diagnosticLog("LIFECYCLE","VISIBILITY_CHANGE",{visibility:document.visibilityState});
   if(document.hidden) releaseLamp("visibility hidden");
+  diagnosticLog("LIFECYCLE","VISIBILITY_CHANGE",{visibility:document.visibilityState});
+  if(!document.hidden) scheduleForegroundResume("visibility visible");
 });
 try{
   navigator.bluetooth?.addEventListener?.("backgroundstatechanged",event=>{

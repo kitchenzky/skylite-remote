@@ -327,55 +327,81 @@ class TelinkMesh{
     this.dst=0xFFFF;               // broadcast until we learn the real address
     this.powerStateKnown=false;
     this.sessionKey=null; this.device=null;
+    this.disconnectHandler=null; this.notifyHandler=null;
   }
-  async connect(){
-    this.device=await navigator.bluetooth.requestDevice({
-      acceptAllDevices:true,
-      optionalServices:[SERVICE]
-    });
-    this.device.addEventListener('gattserverdisconnected',()=>{
+  async connect(device){
+    this.device=device;
+    this.disconnectHandler=()=>{
+      this._clearConnection(false);
       this.sessionKey=null;
       if(mesh!==this) return;
       stopPresetEffect();
       setStatus("Disconnected — tap Connect to reconnect.","");
       $("controls").classList.remove("ready");
-    });
-    const server=await this.device.gatt.connect();
-    const svc=await server.getPrimaryService(SERVICE);
-    this.pairCh=await svc.getCharacteristic(CH_PAIR);
-    this.cmdCh=await svc.getCharacteristic(CH_COMMAND);
-    this.notifyCh=await svc.getCharacteristic(CH_NOTIFY);
-
-    // --- mesh login handshake ---
-    const our=new Uint8Array(8); crypto.getRandomValues(our);
-    const km=new Uint8Array(16); km.set(our);
-    const v20=aesNoFinal(km,this.combined);
-    const encTail=rev(v20.subarray(8,16));
-    const pairPkt=new Uint8Array(17); pairPkt[0]=0x0C; pairPkt.set(our,1); pairPkt.set(encTail,9);
-    await this.pairCh.writeValue(pairPkt);
-    await sleep(300);
-    const resp=new Uint8Array((await this.pairCh.readValue()).buffer);
-    if(resp[0]!==0x0D) throw new Error("Light rejected pairing (0x"+resp[0].toString(16)+"). Close the BlissLights app on all phones, then retry.");
-    const dev=resp.subarray(1,9);
-    const cat=new Uint8Array(16); cat.set(our); cat.set(dev,8);
-    this.sessionKey=aesAtt(this.combined,cat);
-
-    // --- enable status notifications (to learn the mesh address) ---
-    await this.notifyCh.startNotifications();
-    this.notifyCh.addEventListener('characteristicvaluechanged',e=>this._onNotify(new Uint8Array(e.target.value.buffer)));
-    await this.notifyCh.writeValue(Uint8Array.of(0x01));
+    };
+    this.device.addEventListener('gattserverdisconnected',this.disconnectHandler);
     try{
-      const initial = await this.notifyCh.readValue();
-      this._onNotify(new Uint8Array(initial.buffer));
+      const server=await this.device.gatt.connect();
+      const svc=await server.getPrimaryService(SERVICE);
+      this.pairCh=await svc.getCharacteristic(CH_PAIR);
+      this.cmdCh=await svc.getCharacteristic(CH_COMMAND);
+      this.notifyCh=await svc.getCharacteristic(CH_NOTIFY);
+
+      // --- mesh login handshake ---
+      const our=new Uint8Array(8); crypto.getRandomValues(our);
+      const km=new Uint8Array(16); km.set(our);
+      const v20=aesNoFinal(km,this.combined);
+      const encTail=rev(v20.subarray(8,16));
+      const pairPkt=new Uint8Array(17); pairPkt[0]=0x0C; pairPkt.set(our,1); pairPkt.set(encTail,9);
+      await this.pairCh.writeValue(pairPkt);
+      await sleep(300);
+      const resp=new Uint8Array((await this.pairCh.readValue()).buffer);
+      if(resp[0]!==0x0D) throw new Error("Light rejected pairing (0x"+resp[0].toString(16)+"). Close the BlissLights app on all phones, then retry.");
+      const dev=resp.subarray(1,9);
+      const cat=new Uint8Array(16); cat.set(our); cat.set(dev,8);
+      this.sessionKey=aesAtt(this.combined,cat);
+
+      // --- enable status notifications (to learn the mesh address) ---
+      await this.notifyCh.startNotifications();
+      this.notifyHandler=e=>this._onNotify(new Uint8Array(e.target.value.buffer));
+      this.notifyCh.addEventListener('characteristicvaluechanged',this.notifyHandler);
+      await this.notifyCh.writeValue(Uint8Array.of(0x01));
+      try{
+        const initial = await this.notifyCh.readValue();
+        this._onNotify(new Uint8Array(initial.buffer));
+      }catch(e){ }
+      await sleep(200);
+      await this._waitForDst(2000);
+      await this.queryStatus();
+      await sleep(300);
+      await this._readStatusNotification();
+      await sleep(300);
+      await this.queryStatus();
+      await sleep(700);
+      if(!this.sessionKey||!this.device?.gatt?.connected){
+        throw new Error("Connection was interrupted. Tap Connect to retry.");
+      }
+    }catch(e){
+      this.disconnect();
+      throw e;
+    }
+  }
+  _clearConnection(disconnect){
+    try{
+      if(this.notifyCh&&this.notifyHandler) this.notifyCh.removeEventListener('characteristicvaluechanged',this.notifyHandler);
     }catch(e){ }
-    await sleep(200);
-    await this._waitForDst(2000);
-    await this.queryStatus();
-    await sleep(300);
-    await this._readStatusNotification();
-    await sleep(300);
-    await this.queryStatus();
-    await sleep(700);
+    try{
+      if(this.device&&this.disconnectHandler) this.device.removeEventListener('gattserverdisconnected',this.disconnectHandler);
+    }catch(e){ }
+    this.notifyHandler=null; this.disconnectHandler=null;
+    if(disconnect){
+      try{ if(this.device?.gatt?.connected) this.device.gatt.disconnect(); }catch(e){ }
+    }
+    this.sessionKey=null;
+    this.pairCh=null; this.cmdCh=null; this.notifyCh=null;
+  }
+  disconnect(){
+    this._clearConnection(true);
   }
   async _waitForDst(timeout=2000){
     if(this.dst!==0xFFFF) return;
@@ -452,6 +478,7 @@ const $=id=>document.getElementById(id);
 const powerToggle=$("powerToggle");
 const POWER_STORAGE_KEY="skylite-power-state";
 const PRESET_STORAGE_KEY="skylite-active-preset";
+const DEVICE_STORAGE_KEY="skylite-bluetooth-device-id";
 function loadPowerState(){
   try{ return localStorage.getItem(POWER_STORAGE_KEY)==="on"; }catch(e){ return false; }
 }
@@ -460,6 +487,36 @@ function loadPresetState(){
     const id=Number(localStorage.getItem(PRESET_STORAGE_KEY));
     return PRESETS.some(([presetId])=>presetId===id) ? id : null;
   }catch(e){ return null; }
+}
+function loadBluetoothDeviceId(){
+  try{ return localStorage.getItem(DEVICE_STORAGE_KEY); }catch(e){ return null; }
+}
+function saveBluetoothDevice(device){
+  try{ if(device?.id) localStorage.setItem(DEVICE_STORAGE_KEY,device.id); }catch(e){ }
+}
+function clearBluetoothDeviceId(){
+  try{ localStorage.removeItem(DEVICE_STORAGE_KEY); }catch(e){ }
+}
+async function selectBluetoothDevice(forceChooser=false){
+  const savedId=loadBluetoothDeviceId();
+  if(!forceChooser&&typeof navigator.bluetooth?.getDevices==="function"){
+    try{
+      const devices=await navigator.bluetooth.getDevices();
+      if(savedId){
+        const savedDevice=devices.find(device=>device.id===savedId);
+        if(savedDevice) return {device:savedDevice,remembered:true};
+        clearBluetoothDeviceId();
+      }else if(devices.length===1){
+        // Migration from older builds that already had Bluefy permission.
+        return {device:devices[0],remembered:true};
+      }
+    }catch(e){ }
+  }
+  const device=await navigator.bluetooth.requestDevice({
+    acceptAllDevices:true,
+    optionalServices:[SERVICE]
+  });
+  return {device,remembered:false};
 }
 let powerOn = loadPowerState();
 let activePresetId = loadPresetState() ?? DEFAULT_PRESET_ID;
@@ -690,17 +747,44 @@ window.onCommandSent=(cmdByte,data,pkt)=>{
   if(sub===SUB_CONTROL) $("debug").textContent="manual controls sent";
 };
 
+let connectInProgress=false;
+let forceChooserNextConnect=false;
 $("connectBtn").onclick=async()=>{
   if(!navigator.bluetooth){ setStatus("This browser has no Bluetooth. Open this page in the Bluefy app.","err"); return; }
+  if(connectInProgress) return;
+  if(mesh?.sessionKey&&mesh.device?.gatt?.connected){ setStatus("Connected ✓","on"); return; }
+  let selection=null;
+  connectInProgress=true;
+  $("connectBtn").disabled=true;
   try{
     stopPresetEffect();
+    $("controls").classList.remove("ready");
     setStatus("Connecting…","");
-    mesh=new TelinkMesh();
-    await mesh.connect();
+    if(mesh) mesh.disconnect();
+    mesh=null;
+    const forceChooser=forceChooserNextConnect;
+    forceChooserNextConnect=false;
+    selection=await selectBluetoothDevice(forceChooser);
+    setStatus(selection.remembered?"Reconnecting…":"Connecting…","");
+    const nextMesh=new TelinkMesh();
+    mesh=nextMesh;
+    await nextMesh.connect(selection.device);
+    saveBluetoothDevice(nextMesh.device);
     syncPowerToggle();
     setStatus("Connected ✓","on");
     $("controls").classList.add("ready");
-  }catch(e){ setStatus(e.message||String(e),"err"); }
+  }catch(e){
+    if(mesh){ mesh.disconnect(); mesh=null; }
+    const message=e.message||String(e);
+    if(!selection&&e.name==="NotFoundError") setStatus("No device selected.","");
+    else if(selection?.remembered&&!message.startsWith("Light rejected pairing")){
+      forceChooserNextConnect=true;
+      setStatus("Saved projector is unavailable. Check its power, then tap Connect to choose it again.","err");
+    }else setStatus(message,"err");
+  }finally{
+    connectInProgress=false;
+    $("connectBtn").disabled=false;
+  }
 };
 
 // Serialize commands through a promise chain: every tap is sent in the
@@ -785,7 +869,12 @@ $("rotationToggle").addEventListener("change",()=>{
 // lamp to advertise again -- this is what makes it findable while off.
 function releaseLamp(){
   stopPresetEffect();
-  try{ if(mesh && mesh.device && mesh.device.gatt && mesh.device.gatt.connected) mesh.device.gatt.disconnect(); }catch(e){}
+  const wasConnected=!!(mesh?.sessionKey||mesh?.device?.gatt?.connected);
+  try{ if(mesh) mesh.disconnect(); }catch(e){}
+  if(wasConnected){
+    setStatus("Disconnected — tap Connect to reconnect.","");
+    $("controls").classList.remove("ready");
+  }
 }
 window.addEventListener("pagehide", releaseLamp);
 window.addEventListener("beforeunload", releaseLamp);

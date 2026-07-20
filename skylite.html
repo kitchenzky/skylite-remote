@@ -372,7 +372,7 @@ const enc=s=>new TextEncoder().encode(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-21-diagnostics-11";
+const APP_BUILD="2026-07-21-diagnostics-12";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -1003,6 +1003,7 @@ let presetEffectTimer=null;
 let presetEffectGeneration=0;
 let presetEffectWakeLock=null;
 let bluefyScreenDimDisabled=false;
+let bluefyScreenDimGeneration=0;
 diagnosticLog("STATE","CACHED_STATE_LOADED",{power:powerOn?"ON":"OFF",powerSource:"local storage",presetId:activePresetId,presetSource:"local storage/UI; not device-confirmed",savedDeviceIdPresent:!!loadBluetoothDeviceId()});
 function savePowerState(){
   try{
@@ -1044,6 +1045,7 @@ function setPresetSelection(id,source="UI"){
 function releasePresetEffectWakeLock(){
   if(bluefyScreenDimDisabled){
     bluefyScreenDimDisabled=false;
+    bluefyScreenDimGeneration=0;
     try{
       const restoreResult=navigator.bluetooth?.setScreenDimEnabled?.(true);
       if(restoreResult&&typeof restoreResult.catch==="function"){
@@ -1060,15 +1062,34 @@ async function keepPresetEffectAwake(generation){
   if(generation!==presetEffectGeneration || document.hidden) return;
   if(typeof navigator.bluetooth?.setScreenDimEnabled==="function"){
     try{
-      await navigator.bluetooth.setScreenDimEnabled(false);
-      if(generation!==presetEffectGeneration || document.hidden || !isAnimatedPreset(activePresetId)){
-        try{ await navigator.bluetooth.setScreenDimEnabled(true); }
-        catch(e){ diagnosticError("PRESET","SCREEN_DIM_STALE_RESTORE_FAILED",e); }
-        return;
-      }
+      const disableResult=navigator.bluetooth.setScreenDimEnabled(false);
       bluefyScreenDimDisabled=true;
-      diagnosticLog("PRESET","SCREEN_DIM_DISABLED",{method:"Bluefy API",presetId:activePresetId});
-      return;
+      bluefyScreenDimGeneration=generation;
+      diagnosticLog("PRESET","SCREEN_DIM_DISABLE_REQUESTED",{method:"Bluefy API",presetId:activePresetId});
+      if(disableResult&&typeof disableResult.then==="function"){
+        Promise.resolve(disableResult).then(()=>{
+          if(bluefyScreenDimGeneration===generation&&generation===presetEffectGeneration&&!document.hidden&&isAnimatedPreset(activePresetId)){
+            bluefyScreenDimDisabled=true;
+            diagnosticLog("PRESET","SCREEN_DIM_DISABLED",{method:"Bluefy API",presetId:activePresetId});
+            return;
+          }
+          if(bluefyScreenDimGeneration!==0) return;
+          try{
+            const staleRestore=navigator.bluetooth.setScreenDimEnabled(true);
+            if(staleRestore&&typeof staleRestore.catch==="function"){
+              staleRestore.catch(e=>diagnosticError("PRESET","SCREEN_DIM_STALE_RESTORE_FAILED",e));
+            }
+          }catch(e){ diagnosticError("PRESET","SCREEN_DIM_STALE_RESTORE_FAILED",e); }
+        }).catch(e=>{
+          if(bluefyScreenDimGeneration===generation){
+            bluefyScreenDimDisabled=false;
+            bluefyScreenDimGeneration=0;
+          }
+          diagnosticError("PRESET","SCREEN_DIM_DISABLE_FAILED",e,{fallback:"Screen Wake Lock"});
+        });
+      }else{
+        diagnosticLog("PRESET","SCREEN_DIM_DISABLED",{method:"Bluefy API (synchronous)",presetId:activePresetId});
+      }
     }catch(e){ diagnosticError("PRESET","SCREEN_DIM_DISABLE_FAILED",e,{fallback:"Screen Wake Lock"}); }
   }
   if(!navigator.wakeLock || presetEffectWakeLock){

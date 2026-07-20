@@ -372,7 +372,7 @@ const enc=s=>new TextEncoder().encode(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-20-diagnostics-7";
+const APP_BUILD="2026-07-20-diagnostics-8";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -615,6 +615,7 @@ class TelinkMesh{
     this.animationCycleCounts={};
     this.connectCancelled=false;
     this.connectCancelReason="";
+    this.lastConnectFailureStage=null;
   }
   async _connectAwait(promise,stage){
     const value=await promise;
@@ -635,6 +636,7 @@ class TelinkMesh{
     let stage="listener setup";
     this.connectCancelled=false;
     this.connectCancelReason="";
+    this.lastConnectFailureStage=null;
     this.device=device;
     diagnosticLog("BT","CONNECT_START",{device:diagnosticDeviceRef(device),alreadyConnected:!!device?.gatt?.connected});
     this.disconnectHandler=()=>{
@@ -745,6 +747,8 @@ class TelinkMesh{
         presetSource:this.presetStateSource
       });
     }catch(e){
+      this.lastConnectFailureStage=stage;
+      try{ if(e&&typeof e==="object") e.telinkConnectStage=stage; }catch(ignored){}
       if(e.name==="AbortError"||this.connectCancelled) diagnosticLog("BT","CONNECT_CANCELLED",{stage,reason:this.connectCancelReason||e.message,durationMs:Math.round(performance.now()-connectStarted)},"WARN");
       else diagnosticError("BT","CONNECT_FAILED",e,{stage,durationMs:Math.round(performance.now()-connectStarted)});
       if(this.disconnectHandler||this.notifyHandler||this.sessionKey||this.device?.gatt?.connected) this.disconnect("connect failure: "+stage);
@@ -1332,10 +1336,32 @@ $("connectBtn").onclick=async()=>{
     }
     assertConnectAttemptActive(attempt,"device selection");
     diagnosticLog("CONNECT","DEVICE_SELECTED",{attemptId,source:selection.source,device:diagnosticDeviceRef(selection.device)});
-    const nextMesh=new TelinkMesh();
+    let nextMesh=new TelinkMesh();
     mesh=nextMesh;
     if(attempt.cancelled){ nextMesh.disconnect("cancelled before GATT connect"); assertConnectAttemptActive(attempt,"before GATT connect"); }
-    await nextMesh.connect(selection.device);
+    try{
+      await nextMesh.connect(selection.device);
+    }catch(firstError){
+      const firstFailureStage=firstError?.telinkConnectStage||nextMesh.lastConnectFailureStage;
+      const canRetryRememberedDevice=selection.remembered&&firstError?.name!=="AbortError"&&
+        firstFailureStage==="gatt connect"&&!attempt.cancelled;
+      if(!canRetryRememberedDevice) throw firstError;
+      diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SCHEDULED",{
+        attemptId,delayMs:900,reason:firstError?.message||String(firstError),device:diagnosticDeviceRef(selection.device)
+      },"WARN");
+      try{
+        if(selection.device?.gatt?.connected) selection.device.gatt.disconnect();
+      }catch(disconnectError){
+        diagnosticError("CONNECT","REMEMBERED_GATT_RETRY_RELEASE_FAILED",disconnectError,{attemptId});
+      }
+      await sleep(900);
+      assertConnectAttemptActive(attempt,"remembered-device retry delay");
+      diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_START",{attemptId,device:diagnosticDeviceRef(selection.device)});
+      nextMesh=new TelinkMesh();
+      mesh=nextMesh;
+      await nextMesh.connect(selection.device);
+      diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SUCCESS",{attemptId});
+    }
     if(attempt.cancelled){ nextMesh.disconnect("cancelled after GATT connect"); assertConnectAttemptActive(attempt,"after GATT connect"); }
     saveBluetoothDevice(nextMesh.device);
     syncPowerToggle();
@@ -1343,13 +1369,14 @@ $("connectBtn").onclick=async()=>{
     setStatus("connected","Connection and Telink login completed");
     $("controls").classList.add("ready");
   }catch(e){
+    const failedConnectStage=e?.telinkConnectStage||mesh?.lastConnectFailureStage||"unknown";
     if(mesh){ mesh.disconnect("connect handler error cleanup"); mesh=null; }
     const message=e.message||String(e);
     if(attempt.cancelled){
       diagnosticLog("CONNECT","ATTEMPT_CANCELLED_BY_LIFECYCLE",{attemptId,reason:attempt.cancelReason,durationMs:Math.round(performance.now()-attemptStarted)},"WARN");
       setStatus("idle","Connection stopped for "+attempt.cancelReason);
     }else{
-      diagnosticError("CONNECT","ATTEMPT_FAILED",e,{attemptId,durationMs:Math.round(performance.now()-attemptStarted),selectionSource:selection?.source||"none"});
+      diagnosticError("CONNECT","ATTEMPT_FAILED",e,{attemptId,durationMs:Math.round(performance.now()-attemptStarted),selectionSource:selection?.source||"none",connectStage:failedConnectStage});
       if(!selection&&e.name==="NotFoundError") setStatus("idle","Device chooser cancelled");
       else if(selection?.remembered&&!message.startsWith("Light rejected pairing")){
         forceChooserNextConnect=true;

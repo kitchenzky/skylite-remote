@@ -35,8 +35,11 @@
   html{background-color:#060810;}
   body{
     padding:max(20px,env(safe-area-inset-top)) 18px 44px; min-height:100vh; max-width:520px; margin:0 auto;
-    background-color:#060810;
+    background-color:#060810; position:relative;
   }
+  body.diagnostics-open{overflow:hidden;}
+  .app-header{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
+  .app-title{min-width:0;}
   h1{font-size:26px; font-weight:700; margin:4px 0 2px; letter-spacing:-.02em;}
   .sub{color:var(--muted); font-size:14px; margin-bottom:22px;}
   button{font-family:inherit; cursor:pointer; border:none; color:var(--text);
@@ -50,6 +53,12 @@
   .status{font-size:13px; color:var(--muted); text-align:center; min-height:18px; margin-bottom:20px;}
   .status.on{color:var(--accent);}
   .status.err{color:var(--err);}
+  .diagnostics-button,.diagnostics-back{width:44px; height:44px; flex:0 0 44px; padding:0; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center; background:var(--panel); color:var(--accent);
+    border:1px solid var(--hair);}
+  .diagnostics-button{margin-top:1px; color:var(--muted);}
+  .diagnostics-button svg,.diagnostics-back svg,.diagnostics-copy svg,.diagnostics-clear svg{width:19px; height:19px; fill:none;
+    stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
   .card{width:100%; min-width:0; background:var(--panel); border:1px solid var(--hair); border-radius:16px; padding:18px; margin-bottom:12px;}
   .card h2{font-size:12px; font-weight:650; color:var(--muted); text-transform:uppercase;
     letter-spacing:.08em; margin:0 0 14px;}
@@ -148,7 +157,35 @@
   #controls{opacity:.35; pointer-events:none; transition:opacity .3s var(--ease-out);}
   #controls.ready{opacity:1; pointer-events:auto;}
   .hint{font-size:12px; color:var(--muted); text-align:center; margin-top:14px; line-height:1.6; max-width:38ch; margin-left:auto; margin-right:auto;}
-  .debug{display:none;}
+  .diagnostics-view[hidden]{display:none;}
+  .diagnostics-view{position:fixed; inset:0; z-index:100; width:100%; max-width:520px; height:100vh; height:100dvh;
+    margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 18px 44px;
+    background:var(--bg); display:flex; flex-direction:column; overflow:hidden;}
+  .diagnostics-shell{width:100%; min-height:0; flex:1; margin:0 auto;
+    display:flex; flex-direction:column; gap:12px;}
+  .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:10px;}
+  .diagnostics-title{min-width:0;}
+  .diagnostics-title h2{font-size:18px; line-height:1.1; margin:0 0 3px; display:flex; align-items:center; gap:8px; color:var(--text);}
+  .diagnostics-title h2 svg{width:19px; height:19px; flex:0 0 19px; fill:none; stroke:currentColor;
+    stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+  .diagnostics-title p{font-size:12px; color:var(--muted); margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .diagnostics-copy,.diagnostics-clear{width:96px; height:44px; min-height:44px; max-height:44px;
+    flex:0 0 96px; padding:0 12px; border-radius:999px; display:inline-flex; align-items:center;
+    justify-content:center; gap:7px; font-size:12px; font-weight:700;}
+  .diagnostics-copy{background:var(--accent); color:var(--accent-ink); border:1px solid transparent;}
+  .diagnostics-summary{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
+  .diagnostics-summary>div{min-width:0; padding:10px 12px; border-radius:12px; border:1px solid var(--hair); background:var(--panel);}
+  .diagnostics-summary span{display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:700;
+    letter-spacing:.07em; text-transform:uppercase;}
+  .diagnostics-summary strong{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;}
+  .diagnostics-log{min-height:0; flex:1; margin:0; padding:14px; overflow:auto; overscroll-behavior:contain;
+    border:1px solid var(--hair); border-radius:14px; background:#03050b; color:#c9cde0;
+    font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; -webkit-user-select:text;}
+  .diagnostics-footer{display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:44px;}
+  .diagnostics-note{min-width:0; color:var(--muted); font-size:12px; line-height:1.35;}
+  .diagnostics-clear{background:var(--panel); color:var(--err); border:1px solid var(--hair);}
+  .diagnostics-toast{min-height:15px; color:var(--accent); font-size:11px; text-align:right;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -165,6 +202,11 @@
     .grid button{padding:12px 10px; font-size:12px; gap:6px;}
     .grid button .check{font-size:14px;}
     .color-label{gap:6px;}
+    .diagnostics-view{padding-top:max(16px,env(safe-area-inset-top));
+      padding-right:max(12px,env(safe-area-inset-right)); padding-bottom:36px;
+      padding-left:max(12px,env(safe-area-inset-left));}
+    .diagnostics-header{gap:8px;}
+    .diagnostics-copy{padding:0 12px;}
   }
   @media (max-width:340px){
     .brightness-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -173,15 +215,23 @@
 </style>
 </head>
 <body>
-  <h1>Kitchenzky Sky Remote</h1>
-  <div class="sub">Let there be light!</div>
+  <main id="mainApp">
+  <div class="app-header">
+    <div class="app-title">
+      <h1>Kitchenzky Sky Remote</h1>
+      <div class="sub">Let there be light!</div>
+    </div>
+    <button class="diagnostics-button" id="diagnosticsButton" type="button" aria-label="Open diagnostic logs" aria-controls="diagnosticsView" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M17.47 9c1.93-.2 3.53-1.9 3.53-4"/><path d="M18 13h4"/><path d="M21 21c0-2.1-1.7-3.9-3.8-4"/></svg>
+    </button>
+  </div>
 
   <button class="connect" id="connectBtn" aria-label="Connect to light">
     <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
       <path d="M512 981.333333c-8.533333 0-12.8 0-21.333333-4.266666-12.8-8.533333-21.333333-21.333333-21.333334-38.4v-332.8l-209.066666 174.933333c-17.066667 17.066667-46.933333 12.8-59.733334-4.266667-17.066667-17.066667-12.8-46.933333 4.266667-59.733333l238.933333-200.533333-234.666666-204.8c-17.066667-17.066667-21.333333-42.666667-4.266667-59.733334 17.066667-17.066667 42.666667-21.333333 59.733333-4.266666l204.8 170.666666V85.333333c0-17.066667 8.533333-29.866667 21.333334-38.4 12.8-8.533333 29.866667-4.266667 42.666666 4.266667L810.666667 243.2c12.8 8.533333 17.066667 21.333333 17.066666 34.133333 0 12.8-4.266667 25.6-17.066666 34.133334L576 512l238.933333 200.533333c8.533333 8.533333 17.066667 21.333333 17.066667 34.133334 0 12.8-8.533333 25.6-17.066667 34.133333l-277.333333 192c-8.533333 4.266667-17.066667 8.533333-25.6 8.533333z m42.666667-375.466666v251.733333l166.4-115.2-166.4-136.533333z m0-439.466667v251.733333l166.4-140.8L554.666667 166.4z"/>
     </svg>
   </button>
-  <div class="status" id="status">Tap Connect, then pick "BlissLights".</div>
+  <div class="status" id="status" role="status" aria-live="polite">Tap Connect, then pick "BlissLights".</div>
 
   <div id="controls">
     <div class="card">
@@ -235,8 +285,38 @@
       </div>
     </div>
   </div>
+  </main>
 
-  <div class="debug" id="debug"></div>
+  <section class="diagnostics-view" id="diagnosticsView" role="dialog" aria-modal="true" aria-labelledby="diagnosticsTitle" hidden>
+    <div class="diagnostics-shell">
+      <div class="diagnostics-header">
+        <button class="diagnostics-back" id="diagnosticsBack" type="button" aria-label="Back to main app">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="diagnostics-title">
+          <h2 id="diagnosticsTitle">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M17.47 9c1.93-.2 3.53-1.9 3.53-4"/><path d="M18 13h4"/><path d="M21 21c0-2.1-1.7-3.9-3.8-4"/></svg>
+            Diagnostic Log
+          </h2>
+          <p id="diagnosticsCount">0 saved events</p>
+        </div>
+        <button class="diagnostics-copy" id="diagnosticsCopy" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          COPY
+        </button>
+      </div>
+      <div class="diagnostics-summary" id="diagnosticsSummary"></div>
+      <pre class="diagnostics-log" id="diagnosticsLog" tabindex="0" aria-label="Diagnostic events"></pre>
+      <div class="diagnostics-footer">
+        <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
+        <button class="diagnostics-clear" id="diagnosticsClear" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          CLEAR
+        </button>
+      </div>
+      <div class="diagnostics-toast" id="diagnosticsToast" role="status" aria-live="polite"></div>
+    </div>
+  </section>
 
 <script>
 "use strict";
@@ -291,6 +371,193 @@ const pad16=b=>{const o=new Uint8Array(16);o.set(b.subarray(0,16));return o;};
 const enc=s=>new TextEncoder().encode(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
+/* ============================ Persistent diagnostics ============================ */
+const APP_BUILD="2026-07-20-diagnostics-7";
+const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
+const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
+const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
+const DIAGNOSTIC_MAX_ENTRIES=240;
+const DIAGNOSTIC_MAX_CHARS=80000;
+const DIAGNOSTIC_ANIMATION_SAMPLE_MS=15000;
+const diagnosticSessionId=Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,5);
+const diagnosticSessionStartedAt=performance.now();
+let diagnosticSessionEnded=false;
+let diagnosticPersistenceState="persistent";
+let diagnosticPersistenceError="";
+let diagnosticStorageReady=false;
+function diagnosticSafeText(value,maxLength=500){
+  return String(value??"")
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g," ")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,"[identifier]")
+    .replace(/\b(?:[0-9a-f]{2}:){5}[0-9a-f]{2}\b/gi,"[mac]")
+    .replace(/\s+/g," ").trim().slice(0,maxLength);
+}
+function noteDiagnosticPersistenceFailure(error,state="memory only"){
+  diagnosticPersistenceState=state;
+  diagnosticPersistenceError=diagnosticSafeText(error?.message||error||"Storage unavailable",180);
+  if(diagnosticStorageReady) scheduleDiagnosticRender(true);
+}
+try{
+  localStorage.setItem(DIAGNOSTIC_TEST_KEY,"ok");
+  if(localStorage.getItem(DIAGNOSTIC_TEST_KEY)!=="ok") throw new Error("Storage self-test did not round-trip");
+  localStorage.removeItem(DIAGNOSTIC_TEST_KEY);
+}catch(e){ noteDiagnosticPersistenceFailure(e); }
+function loadDiagnosticEntries(){
+  if(diagnosticPersistenceState==="memory only") return [];
+  try{
+    const saved=JSON.parse(localStorage.getItem(DIAGNOSTIC_STORAGE_KEY)||"[]");
+    return Array.isArray(saved) ? saved.filter(x=>typeof x==="string").slice(-DIAGNOSTIC_MAX_ENTRIES) : [];
+  }catch(e){
+    diagnosticPersistenceState="history reset";
+    diagnosticPersistenceError="Saved diagnostic history was unreadable; this session started fresh.";
+    try{ localStorage.removeItem(DIAGNOSTIC_STORAGE_KEY); }catch(ignore){ noteDiagnosticPersistenceFailure(ignore); }
+    return [];
+  }
+}
+let diagnosticEntries=loadDiagnosticEntries();
+diagnosticStorageReady=true;
+function diagnosticHex(bytes){
+  return Array.from(bytes||[],value=>Number(value).toString(16).padStart(2,"0")).join("");
+}
+const diagnosticDeviceAliases=new Map();
+const diagnosticAnonymousDeviceAliases=new WeakMap();
+let diagnosticDeviceAliasCounter=0;
+function diagnosticDeviceAlias(device){
+  const id=String(device?.id||"");
+  if(id){
+    if(!diagnosticDeviceAliases.has(id)) diagnosticDeviceAliases.set(id,"projector #"+(++diagnosticDeviceAliasCounter));
+    return diagnosticDeviceAliases.get(id);
+  }
+  if(device&&typeof device==="object"){
+    if(!diagnosticAnonymousDeviceAliases.has(device)) diagnosticAnonymousDeviceAliases.set(device,"projector #"+(++diagnosticDeviceAliasCounter));
+    return diagnosticAnonymousDeviceAliases.get(device);
+  }
+  return "projector (unknown)";
+}
+function diagnosticDeviceRef(device){
+  const name=diagnosticSafeText(device?.name||"Unnamed device",32)||"Unnamed device";
+  const type=/blisslights/i.test(name)?"BlissLights":"Bluetooth device";
+  return type+" ("+diagnosticDeviceAlias(device)+")";
+}
+function diagnosticDetails(value){
+  if(value===undefined) return "";
+  if(value instanceof Error) return diagnosticSafeText(value.name+": "+value.message,1000);
+  if(value instanceof Uint8Array) return "[byte array omitted; length "+value.length+"]";
+  if(typeof value==="string") return diagnosticSafeText(value,2000);
+  try{
+    const serialized=JSON.stringify(value,(key,item)=>{
+      if(/device.?id/i.test(key)&&typeof item==="boolean") return item;
+      if(/password|secret|session.?key|key.?value|nonce|challenge|hardware.?mac|real.?mac|mesh.?pw|combined|mac.?rev|token|credential|device.?id|pair.?packet/i.test(key)) return "[redacted]";
+      if(item instanceof Uint8Array) return "[byte array omitted; length "+item.length+"]";
+      if(item instanceof Error) return {name:diagnosticSafeText(item.name,80),message:diagnosticSafeText(item.message,600)};
+      return item;
+    });
+    return diagnosticSafeText(serialized,4000);
+  }catch(e){ return diagnosticSafeText(String(value),1000); }
+}
+function trimDiagnosticEntries(){
+  let total=diagnosticEntries.reduce((sum,line)=>sum+line.length,0);
+  while(diagnosticEntries.length>DIAGNOSTIC_MAX_ENTRIES||total>DIAGNOSTIC_MAX_CHARS){
+    const removed=diagnosticEntries.shift();
+    total-=removed ? removed.length : 0;
+  }
+}
+function persistDiagnosticEntries(){
+  trimDiagnosticEntries();
+  if(diagnosticPersistenceState==="memory only") return;
+  try{ localStorage.setItem(DIAGNOSTIC_STORAGE_KEY,JSON.stringify(diagnosticEntries)); }
+  catch(e){
+    diagnosticEntries=diagnosticEntries.slice(-100);
+    trimDiagnosticEntries();
+    try{
+      localStorage.setItem(DIAGNOSTIC_STORAGE_KEY,JSON.stringify(diagnosticEntries));
+      noteDiagnosticPersistenceFailure(e,"reduced history");
+    }catch(fallbackError){ noteDiagnosticPersistenceFailure(fallbackError); }
+  }
+}
+let diagnosticPersistTimer=null;
+function scheduleDiagnosticPersistence(immediate=false){
+  if(immediate){
+    if(diagnosticPersistTimer!==null){ clearTimeout(diagnosticPersistTimer); diagnosticPersistTimer=null; }
+    persistDiagnosticEntries();
+    return;
+  }
+  if(diagnosticPersistTimer!==null) return;
+  diagnosticPersistTimer=setTimeout(()=>{
+    diagnosticPersistTimer=null;
+    persistDiagnosticEntries();
+  },120);
+}
+let diagnosticRenderTimer=null;
+function scheduleDiagnosticRender(immediate=false){
+  const view=document.getElementById("diagnosticsView");
+  if(!view||view.hidden){ renderDiagnosticEntries(); return; }
+  if(immediate){
+    if(diagnosticRenderTimer!==null){ clearTimeout(diagnosticRenderTimer); diagnosticRenderTimer=null; }
+    renderDiagnosticEntries();
+    return;
+  }
+  if(diagnosticRenderTimer!==null) return;
+  diagnosticRenderTimer=setTimeout(()=>{
+    diagnosticRenderTimer=null;
+    renderDiagnosticEntries();
+  },80);
+}
+function renderDiagnosticEntries(forceBottom=false){
+  const output=document.getElementById("diagnosticsLog");
+  const count=document.getElementById("diagnosticsCount");
+  const view=document.getElementById("diagnosticsView");
+  if(count) count.textContent=diagnosticEntries.length+" saved event"+(diagnosticEntries.length===1?"":"s")+" · "+diagnosticPersistenceState;
+  if(!forceBottom&&view?.hidden) return;
+  if(!output) return;
+  const nearBottom=output.scrollHeight-output.scrollTop-output.clientHeight<70;
+  output.textContent=diagnosticEntries.length ? diagnosticEntries.join("\n") : "No diagnostic events yet.";
+  if(forceBottom||nearBottom) output.scrollTop=output.scrollHeight;
+  if(view&&!view.hidden&&typeof updateDiagnosticSummary==="function") updateDiagnosticSummary();
+}
+function diagnosticLog(category,event,details,level="INFO"){
+  const elapsed=((performance.now()-diagnosticSessionStartedAt)/1000).toFixed(3).padStart(8," ");
+  const extra=diagnosticDetails(details);
+  diagnosticEntries.push(new Date().toISOString()+" +"+elapsed+"s ["+diagnosticSessionId+"] ["+level+"] ["+category+"] "+event+(extra?" | "+extra:""));
+  trimDiagnosticEntries();
+  scheduleDiagnosticPersistence(level!=="INFO"||category==="APP"||category==="LIFECYCLE");
+  scheduleDiagnosticRender(level!=="INFO");
+}
+function diagnosticError(category,event,error,extra){
+  diagnosticLog(category,event,Object.assign({},extra||{},{errorName:error?.name||"Error",errorMessage:error?.message||String(error)}),"ERROR");
+}
+function markDiagnosticSessionActive(){
+  if(diagnosticPersistenceState==="memory only") return;
+  try{ localStorage.setItem(DIAGNOSTIC_ACTIVE_KEY,JSON.stringify({id:diagnosticSessionId,startedAt:new Date().toISOString()})); }
+  catch(e){ noteDiagnosticPersistenceFailure(e); }
+}
+function endDiagnosticSession(reason){
+  if(diagnosticSessionEnded) return;
+  diagnosticSessionEnded=true;
+  diagnosticLog("APP","SESSION_END",{reason});
+  try{ localStorage.removeItem(DIAGNOSTIC_ACTIVE_KEY); }catch(e){ noteDiagnosticPersistenceFailure(e); }
+}
+let previousDiagnosticSession=null;
+try{ previousDiagnosticSession=JSON.parse(localStorage.getItem(DIAGNOSTIC_ACTIVE_KEY)||"null"); }catch(e){ noteDiagnosticPersistenceFailure(e); }
+markDiagnosticSessionActive();
+diagnosticLog("APP","SESSION_START",{
+  build:APP_BUILD,
+  visibility:document.visibilityState,
+  bluetooth:!!navigator.bluetooth,
+  getDevices:typeof navigator.bluetooth?.getDevices==="function",
+  screenDimApi:typeof navigator.bluetooth?.setScreenDimEnabled==="function",
+  logPersistence:diagnosticPersistenceState
+});
+if(diagnosticPersistenceState!=="persistent") diagnosticLog("STORAGE","PERSISTENCE_LIMITED",{state:diagnosticPersistenceState,reason:diagnosticPersistenceError},"WARN");
+if(previousDiagnosticSession?.id&&previousDiagnosticSession.id!==diagnosticSessionId){
+  diagnosticLog("APP","Previous session did not record a clean end",{previousSession:previousDiagnosticSession.id,startedAt:previousDiagnosticSession.startedAt},"WARN");
+}
+window.addEventListener("error",event=>diagnosticError("APP","WINDOW_ERROR",event.error||new Error(event.message||"Unknown window error")));
+window.addEventListener("unhandledrejection",event=>diagnosticError("APP","UNHANDLED_REJECTION",event.reason instanceof Error?event.reason:new Error(String(event.reason))));
+if(typeof navigator.bluetooth?.getAvailability==="function"){
+  navigator.bluetooth.getAvailability().then(value=>diagnosticLog("BT","AVAILABILITY",{available:value})).catch(error=>diagnosticError("BT","AVAILABILITY_ERROR",error));
+}
+
 /* ============================ Device constants ============================ */
 const SERVICE="00010203-0405-0607-0809-0a0b0c0d1910";
 const CH_NOTIFY="00010203-0405-0607-0809-0a0b0c0d1911";
@@ -316,6 +583,15 @@ const PRISM_PULSE_COLORS=[[255,0,0],[0,0,255],[0,255,0]];
 const PRISM_TRANSITION_STEPS=144;
 const PRISM_PULSE_DELAY=100;
 const PRISM_PULSE_FLOOR=.55;
+function describeMeshCommand(cmd,data){
+  if(cmd===0xDA) return {name:"status.query",mode:data.length?"0x"+data[0].toString(16).padStart(2,"0"):"missing"};
+  if(cmd!==OUTER) return {name:"opcode."+cmd.toString(16).padStart(2,"0"),data:diagnosticHex(data)};
+  const sub=data[0];
+  if(sub===SUB_ONOFF&&data[2]===1) return {name:"power.set",on:data[1]===1};
+  if(sub===SUB_ONOFF&&data[2]===0) return {name:"scene.load",sceneId:data[1]};
+  if(sub===SUB_CONTROL) return {name:"manual.setColor",r:data[1],g:data[2],b:data[3],laser:data[4],rotation:data[5],brightness:data[6]};
+  return {name:"control."+sub.toString(16).padStart(2,"0"),data:diagnosticHex(data)};
+}
 
 /* ============================ Mesh class ============================ */
 class TelinkMesh{
@@ -326,122 +602,285 @@ class TelinkMesh{
     this.seq=1+Math.floor(Math.random()*0xFFFFFE);
     this.dst=0xFFFF;               // broadcast until we learn the real address
     this.powerStateKnown=false;
+    this.powerStateSource="unconfirmed";
+    this.presetStateSource="unconfirmed";
     this.sessionKey=null; this.device=null;
     this.disconnectHandler=null; this.notifyHandler=null;
+    this.suppressCommandDiagnostics=false;
+    this.statusSyncActive=true;
+    this.suppressedAnimationNotifications=0;
+    this.lastNotificationSummaryAt=0;
+    this.latestSuppressedNotification=null;
+    this.currentAnimationFrame=null;
+    this.animationCycleCounts={};
+    this.connectCancelled=false;
+    this.connectCancelReason="";
+  }
+  async _connectAwait(promise,stage){
+    const value=await promise;
+    this._throwIfConnectCancelled(stage);
+    return value;
+  }
+  _throwIfConnectCancelled(stage){
+    if(!this.connectCancelled) return;
+    const reason=this.connectCancelReason||"app left the foreground";
+    diagnosticLog("BT","LATE_CONNECT_STOPPED",{stage,reason,gattConnected:!!this.device?.gatt?.connected},"WARN");
+    this._clearConnection(true,"cancelled during "+stage);
+    const error=new Error("Connection stopped because the app left the foreground.");
+    error.name="AbortError";
+    throw error;
   }
   async connect(device){
+    const connectStarted=performance.now();
+    let stage="listener setup";
+    this.connectCancelled=false;
+    this.connectCancelReason="";
     this.device=device;
+    diagnosticLog("BT","CONNECT_START",{device:diagnosticDeviceRef(device),alreadyConnected:!!device?.gatt?.connected});
     this.disconnectHandler=()=>{
-      this._clearConnection(false);
-      this.sessionKey=null;
+      diagnosticLog("BT","GATT_DISCONNECTED",{expected:false,hadSession:!!this.sessionKey,activePresetId},"WARN");
+      this._clearConnection(false,"gattserverdisconnected event");
       if(mesh!==this) return;
       stopPresetEffect();
-      setStatus("Disconnected — tap Connect to reconnect.","");
+      setStatus("error","Unexpected GATT disconnect");
       $("controls").classList.remove("ready");
     };
     this.device.addEventListener('gattserverdisconnected',this.disconnectHandler);
     try{
-      const server=await this.device.gatt.connect();
-      const svc=await server.getPrimaryService(SERVICE);
-      this.pairCh=await svc.getCharacteristic(CH_PAIR);
-      this.cmdCh=await svc.getCharacteristic(CH_COMMAND);
-      this.notifyCh=await svc.getCharacteristic(CH_NOTIFY);
+      stage="gatt connect";
+      diagnosticLog("BT","GATT_CONNECT_START");
+      const server=await this._connectAwait(this.device.gatt.connect(),"gatt connect");
+      diagnosticLog("BT","GATT_CONNECT_OK",{connected:!!this.device.gatt.connected});
+      stage="service discovery";
+      const svc=await this._connectAwait(server.getPrimaryService(SERVICE),"service discovery");
+      diagnosticLog("BT","SERVICE_READY",{service:"telink mesh"});
+      stage="characteristic discovery";
+      this.pairCh=await this._connectAwait(svc.getCharacteristic(CH_PAIR),"pair characteristic discovery");
+      this.cmdCh=await this._connectAwait(svc.getCharacteristic(CH_COMMAND),"command characteristic discovery");
+      this.notifyCh=await this._connectAwait(svc.getCharacteristic(CH_NOTIFY),"notification characteristic discovery");
+      diagnosticLog("BT","CHARACTERISTICS_READY",{pair:true,command:true,notify:true});
 
       // --- mesh login handshake ---
+      stage="Telink login";
+      diagnosticLog("PAIR","LOGIN_START");
       const our=new Uint8Array(8); crypto.getRandomValues(our);
       const km=new Uint8Array(16); km.set(our);
       const v20=aesNoFinal(km,this.combined);
       const encTail=rev(v20.subarray(8,16));
       const pairPkt=new Uint8Array(17); pairPkt[0]=0x0C; pairPkt.set(our,1); pairPkt.set(encTail,9);
-      await this.pairCh.writeValue(pairPkt);
-      await sleep(300);
-      const resp=new Uint8Array((await this.pairCh.readValue()).buffer);
-      if(resp[0]!==0x0D) throw new Error("Light rejected pairing (0x"+resp[0].toString(16)+"). Close the BlissLights app on all phones, then retry.");
+      await this._connectAwait(this.pairCh.writeValue(pairPkt),"login request write");
+      diagnosticLog("PAIR","LOGIN_REQUEST_WRITTEN",{length:pairPkt.length});
+      await this._connectAwait(sleep(300),"login response wait");
+      const resp=new Uint8Array((await this._connectAwait(this.pairCh.readValue(),"login response read")).buffer);
+      const pairStatus=resp.length?"0x"+resp[0].toString(16).padStart(2,"0"):"missing";
+      diagnosticLog("PAIR","LOGIN_RESPONSE",{length:resp.length,status:pairStatus,accepted:resp[0]===0x0D&&resp.length>=9});
+      if(resp[0]!==0x0D){
+        if(!resp.length) diagnosticLog("PAIR","LOGIN_RESPONSE_MALFORMED",{length:0,reason:"missing status byte"},"ERROR");
+        throw new Error(resp.length
+          ? "Light rejected pairing ("+pairStatus+"). Close the BlissLights app on all phones, then retry."
+          : "Light returned an empty pairing response. Reconnect the projector and retry.");
+      }
+      if(resp.length<9){
+        diagnosticLog("PAIR","LOGIN_RESPONSE_MALFORMED",{length:resp.length,status:pairStatus,requiredLength:9},"ERROR");
+        throw new Error("Light returned an incomplete pairing response. Reconnect the projector and retry.");
+      }
       const dev=resp.subarray(1,9);
       const cat=new Uint8Array(16); cat.set(our); cat.set(dev,8);
       this.sessionKey=aesAtt(this.combined,cat);
+      diagnosticLog("PAIR","LOGIN_ACCEPTED",{authReady:true});
 
       // --- enable status notifications (to learn the mesh address) ---
-      await this.notifyCh.startNotifications();
+      stage="notification setup";
+      await this._connectAwait(this.notifyCh.startNotifications(),"notification start");
       this.notifyHandler=e=>this._onNotify(new Uint8Array(e.target.value.buffer));
       this.notifyCh.addEventListener('characteristicvaluechanged',this.notifyHandler);
-      await this.notifyCh.writeValue(Uint8Array.of(0x01));
+      await this._connectAwait(this.notifyCh.writeValue(Uint8Array.of(0x01)),"notification enable write");
+      diagnosticLog("BT","NOTIFICATIONS_READY");
       try{
-        const initial = await this.notifyCh.readValue();
+        const initial = await this._connectAwait(this.notifyCh.readValue(),"initial notification read");
+        diagnosticLog("RX","INITIAL_NOTIFY_READ",{length:initial.byteLength});
         this._onNotify(new Uint8Array(initial.buffer));
-      }catch(e){ }
-      await sleep(200);
-      await this._waitForDst(2000);
-      await this.queryStatus();
-      await sleep(300);
-      await this._readStatusNotification();
-      await sleep(300);
-      await this.queryStatus();
-      await sleep(700);
+      }catch(e){
+        if(e.name==="AbortError") throw e;
+        if(this.connectCancelled) this._throwIfConnectCancelled("initial notification read");
+        diagnosticError("RX","INITIAL_NOTIFY_READ_FAILED",e);
+      }
+      stage="status synchronization";
+      await this._connectAwait(sleep(200),"status synchronization delay");
+      await this._connectAwait(this._waitForDst(2000),"destination synchronization");
+      await this._connectAwait(this.queryStatus(),"first status query");
+      await this._connectAwait(sleep(300),"first status response wait");
+      await this._connectAwait(this._readStatusNotification(),"status notification read");
+      await this._connectAwait(sleep(300),"second status query delay");
+      await this._connectAwait(this.queryStatus(),"second status query");
+      await this._connectAwait(sleep(700),"final status response wait");
       if(!this.sessionKey||!this.device?.gatt?.connected){
         throw new Error("Connection was interrupted. Tap Connect to retry.");
       }
+      // Sky Lite's online/status packets do not expose its real projector
+      // power state. Make Connect deterministic instead: an already-on
+      // projector stays on, while an off projector turns on. This dedicated
+      // power command does not reload or replace the running preset.
+      diagnosticLog("STATE","CONNECT_POWER_ON_START",{previous:powerOn?"ON":"OFF",passiveStateKnown:this.powerStateKnown});
+      await this._connectAwait(this.setPower(true),"connect power-on synchronization");
+      this._setCommandedPowerState(true,"successful Connect");
+      await this._connectAwait(sleep(100),"connect power-on settle");
+      const presetToRestore=activePresetId;
+      diagnosticLog("PRESET","CONNECT_RESTORE_START",{
+        presetId:presetToRestore,
+        label:PRESETS.find(([presetId])=>presetId===presetToRestore)?.[1]||"Unknown",
+        animated:isAnimatedPreset(presetToRestore)
+      });
+      const presetRestored=await this._connectAwait(applyPreset(presetToRestore,"successful Connect restore"),"connect preset restoration");
+      if(presetRestored===false) throw new Error("Connected, but could not restore the saved preset. Tap Connect to retry.");
+      diagnosticLog("PRESET","CONNECT_RESTORE_DONE",{presetId:presetToRestore,source:this.presetStateSource});
+      this.statusSyncActive=false;
+      diagnosticLog("BT","CONNECT_READY",{
+        durationMs:Math.round(performance.now()-connectStarted),
+        destination:this.dst===0xFFFF?"unknown":"0x"+this.dst.toString(16).padStart(4,"0"),
+        powerStateKnown:this.powerStateKnown,
+        powerSource:this.powerStateSource,
+        power:powerOn?"ON":"OFF",
+        presetId:activePresetId,
+        presetSource:this.presetStateSource
+      });
     }catch(e){
-      this.disconnect();
+      if(e.name==="AbortError"||this.connectCancelled) diagnosticLog("BT","CONNECT_CANCELLED",{stage,reason:this.connectCancelReason||e.message,durationMs:Math.round(performance.now()-connectStarted)},"WARN");
+      else diagnosticError("BT","CONNECT_FAILED",e,{stage,durationMs:Math.round(performance.now()-connectStarted)});
+      if(this.disconnectHandler||this.notifyHandler||this.sessionKey||this.device?.gatt?.connected) this.disconnect("connect failure: "+stage);
       throw e;
     }
   }
-  _clearConnection(disconnect){
+  _clearConnection(disconnect,reason="cleanup"){
+    const before={reason,intentional:disconnect,hadSession:!!this.sessionKey,gattConnected:!!this.device?.gatt?.connected,powerStateKnown:this.powerStateKnown};
     try{
       if(this.notifyCh&&this.notifyHandler) this.notifyCh.removeEventListener('characteristicvaluechanged',this.notifyHandler);
-    }catch(e){ }
+    }catch(e){ diagnosticError("BT","NOTIFY_LISTENER_REMOVE_FAILED",e,{reason}); }
     try{
       if(this.device&&this.disconnectHandler) this.device.removeEventListener('gattserverdisconnected',this.disconnectHandler);
-    }catch(e){ }
+    }catch(e){ diagnosticError("BT","DISCONNECT_LISTENER_REMOVE_FAILED",e,{reason}); }
     this.notifyHandler=null; this.disconnectHandler=null;
     if(disconnect){
-      try{ if(this.device?.gatt?.connected) this.device.gatt.disconnect(); }catch(e){ }
+      try{ if(this.device?.gatt?.connected) this.device.gatt.disconnect(); }
+      catch(e){ diagnosticError("BT","GATT_DISCONNECT_FAILED",e,{reason}); }
     }
     this.sessionKey=null;
+    this.powerStateKnown=false;
+    this.powerStateSource="unconfirmed";
+    this.presetStateSource="unconfirmed";
+    this.statusSyncActive=false;
     this.pairCh=null; this.cmdCh=null; this.notifyCh=null;
+    diagnosticLog("BT","CONNECTION_CLEARED",before);
   }
-  disconnect(){
-    this._clearConnection(true);
+  disconnect(reason="app requested"){
+    this.connectCancelled=true;
+    this.connectCancelReason=reason;
+    diagnosticLog("BT","DISCONNECT_REQUEST",{reason,gattConnected:!!this.device?.gatt?.connected,hadSession:!!this.sessionKey});
+    this._clearConnection(true,reason);
   }
   async _waitForDst(timeout=2000){
-    if(this.dst!==0xFFFF) return;
+    if(this.dst!==0xFFFF){
+      diagnosticLog("STATE","DESTINATION_ALREADY_KNOWN",{destination:"0x"+this.dst.toString(16).padStart(4,"0")});
+      return;
+    }
     const start=Date.now();
     while(this.dst===0xFFFF && Date.now()-start<timeout){
       await sleep(50);
     }
+    diagnosticLog("STATE",this.dst===0xFFFF?"DESTINATION_TIMEOUT":"DESTINATION_LEARNED",{
+      waitedMs:Date.now()-start,
+      destination:this.dst===0xFFFF?"unknown":"0x"+this.dst.toString(16).padStart(4,"0")
+    },this.dst===0xFFFF?"WARN":"INFO");
   }
   async _readStatusNotification(){
     try{
       const value = await this.notifyCh.readValue();
+      diagnosticLog("RX","STATUS_READ",{length:value.byteLength});
       this._onNotify(new Uint8Array(value.buffer));
-    }catch(e){ }
+    }catch(e){ diagnosticError("RX","STATUS_READ_FAILED",e); }
   }
-  queryStatus(){ return this._send(0xDA, new Uint8Array(0)); }
+  // Telink status queries carry the standard 0x10 selector. Sending an
+  // empty 0xDA request makes this projector answer with an empty 0xDB packet.
+  queryStatus(){ return this._send(0xDA, Uint8Array.of(0x10)); }
   _setReportedPowerState(state){
-    if(state===null || mesh!==this) return;
+    if(state===null || mesh!==this){
+      diagnosticLog("STATE","REPORTED_POWER_IGNORED",{state,reason:mesh!==this?"stale mesh":"unknown state"},"WARN");
+      return;
+    }
+    const previous=powerOn;
     if(!state) stopPresetEffect();
     this.powerStateKnown=true;
+    this.powerStateSource="device-reported";
     powerOn=state;
     savePowerState();
     syncPowerToggle();
+    diagnosticLog("STATE","POWER_REPORTED",{previous:previous?"ON":"OFF",reported:state?"ON":"OFF",source:"device notification"});
+  }
+  _setCommandedPowerState(state,reason){
+    const previous=powerOn;
+    if(!state) stopPresetEffect(reason);
+    this.powerStateKnown=true;
+    this.powerStateSource="app-commanded";
+    powerOn=state;
+    savePowerState();
+    syncPowerToggle();
+    diagnosticLog("STATE","POWER_COMMANDED",{previous:previous?"ON":"OFF",commanded:state?"ON":"OFF",reason});
   }
   _onNotify(pkt){
-    if(!this.sessionKey||pkt.length<16) return;
+    if(!this.sessionKey||pkt.length<16){
+      diagnosticLog("RX","NOTIFY_IGNORED",{length:pkt.length,reason:!this.sessionKey?"no session":"short packet"},"WARN");
+      return;
+    }
     const ns=new Uint8Array(8); ns.set(this.macRev.subarray(0,3),0); ns.set(pkt.subarray(0,5),3);
     const blk=new Uint8Array(16); blk.set(ns,1);
     const stream=aesAtt(this.sessionKey,blk);
     const dec=new Uint8Array(pkt); for(let i=0;i<pkt.length-7;i++) dec[i+7]^=stream[i&15];
     const op=dec[7], payload=dec[10];
+    const suppressAnimationNoise=!this.statusSyncActive&&activeAnimatedPresetId!==null&&op!==SUB_ONOFF;
+    if(suppressAnimationNoise){
+      this.suppressedAnimationNotifications++;
+      this.latestSuppressedNotification={op:"0x"+op.toString(16).padStart(2,"0"),data:diagnosticHex(dec.subarray(10)),length:pkt.length};
+      if(!this.lastNotificationSummaryAt||Date.now()-this.lastNotificationSummaryAt>DIAGNOSTIC_ANIMATION_SAMPLE_MS){
+        diagnosticLog("RX","ANIMATION_NOTIFICATION_SAMPLE",Object.assign({count:this.suppressedAnimationNotifications,presetId:activeAnimatedPresetId},this.latestSuppressedNotification));
+        this.suppressedAnimationNotifications=0;
+        this.lastNotificationSummaryAt=Date.now();
+      }
+    }else{
+      this._flushAnimationNotificationSummary("notification mode changed");
+      diagnosticLog("RX","NOTIFY",{op:"0x"+op.toString(16).padStart(2,"0"),data:diagnosticHex(dec.subarray(10)),length:pkt.length});
+    }
     if(op===0xDC){
-      if(payload!==0&&payload!==0xFF){ this.dst=payload; }
+      if(payload!==0&&payload!==0xFF){
+        const previous=this.dst;
+        this.dst=payload;
+        if(previous!==payload) diagnosticLog("STATE","DESTINATION_FROM_0xDC",{previous:previous===0xFFFF?"unknown":"0x"+previous.toString(16),destination:"0x"+payload.toString(16)});
+      }
     }
     if(op===0xDB){
-      if(payload!==0&&payload!==0xFF){ this.dst=payload; }
+      const reportData=dec.subarray(10);
+      if(reportData.every(value=>value===0)){
+        diagnosticLog("STATE","STATUS_REPORT_EMPTY",{op:"0xdb",powerUsable:false},"WARN");
+      }else{
+        diagnosticLog("STATE","STATUS_REPORT_RECEIVED",{op:"0xdb",data:diagnosticHex(reportData),powerUsable:"not yet mapped"});
+      }
+      if(payload!==0&&payload!==0xFF){
+        const previous=this.dst;
+        this.dst=payload;
+        if(previous!==payload) diagnosticLog("STATE","DESTINATION_FROM_0xDB",{previous:previous===0xFFFF?"unknown":"0x"+previous.toString(16),destination:"0x"+payload.toString(16)});
+      }
     }
     if(op===SUB_ONOFF){
-      const onState = dec[10]===1;
+      const onState = dec[10]===1 ? true : dec[10]===0 ? false : null;
       this._setReportedPowerState(onState);
     }
+  }
+  _flushAnimationNotificationSummary(reason){
+    if(this.suppressedAnimationNotifications&&this.latestSuppressedNotification){
+      diagnosticLog("RX","ANIMATION_NOTIFICATION_SAMPLE",Object.assign({count:this.suppressedAnimationNotifications,presetId:activeAnimatedPresetId,reason},this.latestSuppressedNotification));
+    }
+    this.suppressedAnimationNotifications=0;
+    this.latestSuppressedNotification=null;
+    this.lastNotificationSummaryAt=0;
   }
   _build(cmd,data){
     const p=new Uint8Array(20);
@@ -461,10 +900,23 @@ class TelinkMesh{
     return p;
   }
   async _send(cmd,data){
-    const pkt=this._build(cmd,data);
-    if(window.onCommandSent) window.onCommandSent(cmd,data,pkt);
-    if(this.cmdCh.writeValueWithoutResponse) await this.cmdCh.writeValueWithoutResponse(pkt);
-    else await this.cmdCh.writeValue(pkt);
+    const details=describeMeshCommand(cmd,data);
+    const shouldLog=!(this.suppressCommandDiagnostics&&details.name==="manual.setColor");
+    const started=performance.now();
+    if(shouldLog) diagnosticLog("TX","COMMAND_START",Object.assign({destination:this.dst===0xFFFF?"unknown":"0x"+this.dst.toString(16)},details));
+    try{
+      const pkt=this._build(cmd,data);
+      try{ if(window.onCommandSent) window.onCommandSent(cmd,data,pkt); }
+      catch(observerError){ diagnosticError("TX","COMMAND_OBSERVER_FAILED",observerError,{name:details.name}); }
+      const withoutResponse=!!this.cmdCh.writeValueWithoutResponse;
+      if(withoutResponse) await this.cmdCh.writeValueWithoutResponse(pkt);
+      else await this.cmdCh.writeValue(pkt);
+      if(shouldLog) diagnosticLog("TX","WRITE_COMPLETED",{name:details.name,withoutResponse,durationMs:Math.round(performance.now()-started),deviceConfirmed:false});
+    }catch(e){
+      diagnosticError("TX",shouldLog?"COMMAND_FAILED":"ANIMATED_WRITE_FAILED",e,{name:details.name,durationMs:Math.round(performance.now()-started),animation:this.currentAnimationFrame});
+      if(e&&typeof e==="object") e.skyliteDiagnosticLogged=true;
+      throw e;
+    }
   }
   setPower(on){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, on?1:0, 0x01)); }
   loadScene(id){ return this._send(OUTER, Uint8Array.of(SUB_ONOFF, id&0xff, 0x00)); }
@@ -492,31 +944,55 @@ function loadBluetoothDeviceId(){
   try{ return localStorage.getItem(DEVICE_STORAGE_KEY); }catch(e){ return null; }
 }
 function saveBluetoothDevice(device){
-  try{ if(device?.id) localStorage.setItem(DEVICE_STORAGE_KEY,device.id); }catch(e){ }
+  try{
+    if(device?.id){
+      localStorage.setItem(DEVICE_STORAGE_KEY,device.id);
+      diagnosticLog("SELECT","DEVICE_ID_SAVED",{device:diagnosticDeviceRef(device)});
+    }
+  }catch(e){ diagnosticError("STORAGE","DEVICE_ID_SAVE_FAILED",e); }
 }
 function clearBluetoothDeviceId(){
-  try{ localStorage.removeItem(DEVICE_STORAGE_KEY); }catch(e){ }
+  try{
+    localStorage.removeItem(DEVICE_STORAGE_KEY);
+    diagnosticLog("SELECT","SAVED_DEVICE_ID_CLEARED");
+  }catch(e){ diagnosticError("STORAGE","DEVICE_ID_CLEAR_FAILED",e); }
 }
 async function selectBluetoothDevice(forceChooser=false){
   const savedId=loadBluetoothDeviceId();
+  diagnosticLog("SELECT","SELECT_START",{forceChooser,savedIdPresent:!!savedId,getDevicesSupported:typeof navigator.bluetooth?.getDevices==="function"});
   if(!forceChooser&&typeof navigator.bluetooth?.getDevices==="function"){
     try{
+      diagnosticLog("SELECT","GET_DEVICES_START");
       const devices=await navigator.bluetooth.getDevices();
+      diagnosticLog("SELECT","GET_DEVICES_RESULT",{count:devices.length,devices:devices.map(diagnosticDeviceRef)});
       if(savedId){
         const savedDevice=devices.find(device=>device.id===savedId);
-        if(savedDevice) return {device:savedDevice,remembered:true};
+        if(savedDevice){
+          diagnosticLog("SELECT","SAVED_DEVICE_MATCH",{device:diagnosticDeviceRef(savedDevice)});
+          return {device:savedDevice,remembered:true,source:"saved device"};
+        }
+        diagnosticLog("SELECT","SAVED_DEVICE_MISS",{permittedCount:devices.length},"WARN");
         clearBluetoothDeviceId();
       }else if(devices.length===1){
         // Migration from older builds that already had Bluefy permission.
-        return {device:devices[0],remembered:true};
+        diagnosticLog("SELECT","SINGLE_PERMISSION_MIGRATED",{device:diagnosticDeviceRef(devices[0])});
+        return {device:devices[0],remembered:true,source:"single existing permission"};
       }
-    }catch(e){ }
+    }catch(e){ diagnosticError("SELECT","GET_DEVICES_FAILED",e); }
   }
-  const device=await navigator.bluetooth.requestDevice({
-    acceptAllDevices:true,
-    optionalServices:[SERVICE]
-  });
-  return {device,remembered:false};
+  diagnosticLog("SELECT","CHOOSER_OPEN",{forced:forceChooser});
+  try{
+    const device=await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true,
+      optionalServices:[SERVICE]
+    });
+    diagnosticLog("SELECT","CHOOSER_SELECTED",{device:diagnosticDeviceRef(device)});
+    return {device,remembered:false,source:"device chooser"};
+  }catch(e){
+    if(e.name==="NotFoundError") diagnosticLog("SELECT","CHOOSER_CANCELLED",undefined,"WARN");
+    else diagnosticError("SELECT","CHOOSER_FAILED",e);
+    throw e;
+  }
 }
 let powerOn = loadPowerState();
 let activePresetId = loadPresetState() ?? DEFAULT_PRESET_ID;
@@ -524,14 +1000,19 @@ let presetEffectTimer=null;
 let presetEffectGeneration=0;
 let presetEffectWakeLock=null;
 let bluefyScreenDimDisabled=false;
+diagnosticLog("STATE","CACHED_STATE_LOADED",{power:powerOn?"ON":"OFF",powerSource:"local storage",presetId:activePresetId,presetSource:"local storage/UI; not device-confirmed",savedDeviceIdPresent:!!loadBluetoothDeviceId()});
 function savePowerState(){
-  try{ localStorage.setItem(POWER_STORAGE_KEY,powerOn?"on":"off"); }catch(e){ }
+  try{
+    localStorage.setItem(POWER_STORAGE_KEY,powerOn?"on":"off");
+    diagnosticLog("STORAGE","POWER_SAVED",{power:powerOn?"ON":"OFF"});
+  }catch(e){ diagnosticError("STORAGE","POWER_SAVE_FAILED",e); }
 }
 function savePresetState(){
   try{
     if(activePresetId===null) localStorage.removeItem(PRESET_STORAGE_KEY);
     else localStorage.setItem(PRESET_STORAGE_KEY,String(activePresetId));
-  }catch(e){ }
+    diagnosticLog("STORAGE","PRESET_SAVED",{presetId:activePresetId,source:"UI; not device-confirmed"});
+  }catch(e){ diagnosticError("STORAGE","PRESET_SAVE_FAILED",e); }
 }
 function syncPowerToggle(){
   if(powerToggle) powerToggle.checked = powerOn;
@@ -548,12 +1029,14 @@ function refreshManualUI(){
   $("rotationOffLabel").classList.toggle("active", !st.motor);
   $("rotationOnLabel").classList.toggle("active", !!st.motor);
 }
-function setPresetSelection(id){
+function setPresetSelection(id,source="UI"){
+  const previous=activePresetId;
   activePresetId = id;
   savePresetState();
   document.querySelectorAll('#presets button').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.presetId===String(id));
   });
+  diagnosticLog("PRESET","UI_SELECTION",{previous,presetId:id,label:PRESETS.find(([presetId])=>presetId===id)?.[1]||"Unknown",source,deviceConfirmed:false});
 }
 function releasePresetEffectWakeLock(){
   if(bluefyScreenDimDisabled){
@@ -586,7 +1069,13 @@ async function keepPresetEffectAwake(generation){
     });
   }catch(e){ }
 }
-function stopPresetEffect(){
+let activeAnimatedPresetId=null;
+function stopPresetEffect(reason="state change"){
+  if(activeAnimatedPresetId!==null){
+    mesh?._flushAnimationNotificationSummary?.("animation stopped: "+reason);
+    diagnosticLog("PRESET","ANIMATION_STOP",{presetId:activeAnimatedPresetId,reason});
+    activeAnimatedPresetId=null;
+  }
   presetEffectGeneration++;
   if(presetEffectTimer!==null){
     clearTimeout(presetEffectTimer);
@@ -653,7 +1142,15 @@ function animatedPresetFrameCount(id){
 }
 async function sendAnimatedPresetFrame(runMesh,id,index){
   const frame=animatedPresetFrame(id,index);
-  await runMesh.setColor(frame[0],frame[1],frame[2],3,frame[3],255);
+  const previousSuppression=runMesh.suppressCommandDiagnostics;
+  const previousFrame=runMesh.currentAnimationFrame;
+  runMesh.suppressCommandDiagnostics=true;
+  runMesh.currentAnimationFrame={presetId:id,frameIndex:index};
+  try{ await runMesh.setColor(frame[0],frame[1],frame[2],3,frame[3],255); }
+  finally{
+    runMesh.suppressCommandDiagnostics=previousSuppression;
+    runMesh.currentAnimationFrame=previousFrame;
+  }
 }
 function schedulePresetEffect(generation,runMesh,id,index){
   if(!presetEffectIsCurrent(generation,runMesh,id)) return;
@@ -661,34 +1158,64 @@ function schedulePresetEffect(generation,runMesh,id,index){
     presetEffectTimer=null;
     if(!presetEffectIsCurrent(generation,runMesh,id)) return;
     const queued=cmd(async()=>{
-      if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+      if(!presetEffectIsCurrent(generation,runMesh,id)){
+        diagnosticLog("PRESET","ANIMATION_FRAME_ABORTED",{presetId:id,frameIndex:index,reason:"preset or connection changed"});
+        return false;
+      }
       await sendAnimatedPresetFrame(runMesh,id,index);
+      return true;
     });
-    if(queued) queued.then(()=>{
+    if(queued) queued.then(succeeded=>{
+      if(!succeeded){
+        if(presetEffectIsCurrent(generation,runMesh,id)) stopPresetEffect("animation frame failed");
+        return;
+      }
       if(presetEffectIsCurrent(generation,runMesh,id)){
         const nextIndex=(index+1)%animatedPresetFrameCount(id);
+        if(nextIndex===0){
+          const cycle=(runMesh.animationCycleCounts[id]||0)+1;
+          runMesh.animationCycleCounts[id]=cycle;
+          if(cycle===1||cycle%5===0) diagnosticLog("PRESET","ANIMATION_HEARTBEAT",{presetId:id,completedCycles:cycle,framesPerCycle:animatedPresetFrameCount(id)});
+        }
         schedulePresetEffect(generation,runMesh,id,nextIndex);
       }
     });
   },animatedPresetDelay(id));
 }
-function applyPreset(id){
-  stopPresetEffect();
+function applyPreset(id,source="UI"){
+  stopPresetEffect("apply another preset");
   const generation=presetEffectGeneration;
   const runMesh=mesh;
   const animated=isAnimatedPreset(id);
+  diagnosticLog("PRESET","APPLY_REQUEST",{presetId:id,label:PRESETS.find(([presetId])=>presetId===id)?.[1]||"Unknown",animated,source,deviceConfirmed:false});
   const queued=cmd(async()=>{
-    if(mesh!==runMesh || !runMesh?.sessionKey || !runMesh.device?.gatt?.connected) return;
+    if(mesh!==runMesh || !runMesh?.sessionKey || !runMesh.device?.gatt?.connected){
+      diagnosticLog("PRESET","APPLY_ABORTED",{presetId:id,reason:"connection changed before command"});
+      return false;
+    }
     if(animated){
-      if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+      if(!presetEffectIsCurrent(generation,runMesh,id)){
+        diagnosticLog("PRESET","APPLY_ABORTED",{presetId:id,reason:"preset or tab changed before first frame"});
+        return false;
+      }
       await sendAnimatedPresetFrame(runMesh,id,0);
     }else{
       await runMesh.loadScene(id);
     }
+    runMesh.presetStateSource="app-commanded";
+    diagnosticLog("PRESET","APPLY_COMPLETED",{presetId:id,animated,source,deviceConfirmed:false});
+    return true;
   });
   if(animated && queued){
+    runMesh.animationCycleCounts[id]=0;
+    activeAnimatedPresetId=id;
+    diagnosticLog("PRESET","ANIMATION_START",{presetId:id,frameCount:animatedPresetFrameCount(id),delayMs:animatedPresetDelay(id)});
     keepPresetEffectAwake(generation);
-    queued.then(()=>{
+    queued.then(succeeded=>{
+      if(!succeeded){
+        if(presetEffectIsCurrent(generation,runMesh,id)) stopPresetEffect("initial animation write failed");
+        return;
+      }
       if(presetEffectIsCurrent(generation,runMesh,id)){
         schedulePresetEffect(generation,runMesh,id,1);
       }
@@ -696,26 +1223,28 @@ function applyPreset(id){
   }
   return queued;
 }
-function selectPreset(id, send=true){
-  setPresetSelection(id);
-  if(send) applyPreset(id);
-  else stopPresetEffect();
+function selectPreset(id,send=true,source="user"){
+  setPresetSelection(id,source);
+  if(send) applyPreset(id,source);
+  else stopPresetEffect("preset selected without sending");
 }
 function hidePresetSelection(){
   document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));
 }
 function activateTab(tabId){
+  const previousTab=document.querySelector('.tab-button.active')?.dataset.tab||"unknown";
+  diagnosticLog("UI","TAB_CHANGE",{previous:previousTab,next:tabId});
   document.querySelectorAll('.tab-button').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.tab===tabId);
   });
   document.querySelectorAll('.tab-panel').forEach(panel=>{
     panel.classList.toggle('active', panel.id===tabId);
   });
-  if(tabId==='lightControlTab') sendColor();
+  if(tabId==='lightControlTab') sendColor("light control tab opened");
   if(tabId==='presetsTab'){
     const presetId=activePresetId;
-    setPresetSelection(presetId);
-    applyPreset(presetId);
+    setPresetSelection(presetId,"presets tab restore");
+    applyPreset(presetId,"presets tab restore");
   }
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
@@ -724,64 +1253,112 @@ document.querySelectorAll('.tab-button').forEach(btn=>{
 if(powerToggle){
   powerToggle.addEventListener("change", ()=>{
     const next = powerToggle.checked;
-    stopPresetEffect();
+    diagnosticLog("UI","POWER_TOGGLE",{previous:powerOn?"ON":"OFF",requested:next?"ON":"OFF"});
+    stopPresetEffect("power toggle");
     cmd(async ()=>{
       await mesh.setPower(next);
-      powerOn = next;
-      savePowerState();
-      syncPowerToggle();
+      mesh._setCommandedPowerState(next,"power toggle");
       if(next){
-        selectPreset(DEFAULT_PRESET_ID, false);
+        selectPreset(DEFAULT_PRESET_ID,false,"power-on default");
         await mesh.loadScene(DEFAULT_PRESET_ID);
       }
     });
   });
 }
 
-function setStatus(t,cls){ const s=$("status"); s.textContent=t; s.className="status "+(cls||""); }
-
-// Shows the byte values of the last command sent, for troubleshooting.
-window.onCommandSent=(cmdByte,data,pkt)=>{
-  if(cmdByte!==OUTER) return;
-  const sub=data[0];
-  if(sub===SUB_CONTROL) $("debug").textContent="manual controls sent";
-};
+const MAIN_STATUS_IDLE='Tap Connect, then pick "BlissLights".';
+function setStatus(state,detail=""){
+  const s=$("status");
+  if(state==="connected"){
+    s.textContent="Connected ✓";
+    s.className="status on";
+  }else if(state==="error"){
+    s.textContent="Can't connect";
+    s.className="status err";
+  }else{
+    s.textContent=MAIN_STATUS_IDLE;
+    s.className="status ";
+  }
+  diagnosticLog("UI","MAIN_STATUS",{state,displayed:s.textContent,detail},state==="error"?"WARN":"INFO");
+}
 
 let connectInProgress=false;
 let forceChooserNextConnect=false;
+let connectAttemptCounter=0;
+let activeConnectAttempt=null;
+function connectAttemptAbortError(reason){
+  const error=new Error("Connection stopped because the app left the foreground. Tap Connect to retry.");
+  error.name="AbortError";
+  error.reason=reason;
+  return error;
+}
+function assertConnectAttemptActive(attempt,stage){
+  if(!attempt.cancelled) return;
+  diagnosticLog("CONNECT","ATTEMPT_STOPPED_LATE",{attemptId:attempt.id,stage,reason:attempt.cancelReason},"WARN");
+  throw connectAttemptAbortError(attempt.cancelReason);
+}
 $("connectBtn").onclick=async()=>{
-  if(!navigator.bluetooth){ setStatus("This browser has no Bluetooth. Open this page in the Bluefy app.","err"); return; }
-  if(connectInProgress) return;
-  if(mesh?.sessionKey&&mesh.device?.gatt?.connected){ setStatus("Connected ✓","on"); return; }
+  diagnosticLog("CONNECT","CONNECT_CLICK",{inProgress:connectInProgress,alreadyConnected:!!(mesh?.sessionKey&&mesh.device?.gatt?.connected),forceChooserNextConnect});
+  if(!navigator.bluetooth){
+    diagnosticLog("CONNECT","CONNECT_BLOCKED",{reason:"Web Bluetooth unavailable"},"ERROR");
+    setStatus("error","This browser has no Bluetooth. Open this page in Bluefy.");
+    return;
+  }
+  if(connectInProgress){ diagnosticLog("CONNECT","CONNECT_CLICK_IGNORED",{reason:"attempt already in progress"},"WARN"); return; }
+  if(mesh?.sessionKey&&mesh.device?.gatt?.connected){ setStatus("connected","Already connected"); return; }
   let selection=null;
+  const attemptId=++connectAttemptCounter;
+  const attempt={id:attemptId,cancelled:false,cancelReason:""};
+  const attemptStarted=performance.now();
+  activeConnectAttempt=attempt;
   connectInProgress=true;
   $("connectBtn").disabled=true;
   try{
+    diagnosticLog("CONNECT","ATTEMPT_START",{attemptId,forceChooser:forceChooserNextConnect});
     stopPresetEffect();
     $("controls").classList.remove("ready");
-    setStatus("Connecting…","");
-    if(mesh) mesh.disconnect();
+    if(mesh) mesh.disconnect("new connect attempt");
     mesh=null;
     const forceChooser=forceChooserNextConnect;
     forceChooserNextConnect=false;
     selection=await selectBluetoothDevice(forceChooser);
-    setStatus(selection.remembered?"Reconnecting…":"Connecting…","");
+    if(document.hidden&&!attempt.cancelled){
+      diagnosticLog("CONNECT","SELECTION_RESOLVED_WHILE_HIDDEN",{attemptId},"WARN");
+      await sleep(80); // Bluefy may briefly hide the page while dismissing its native picker.
+      if(document.hidden&&!attempt.cancelled){
+        attempt.cancelled=true;
+        attempt.cancelReason="device selection completed while app remained hidden";
+      }
+    }
+    assertConnectAttemptActive(attempt,"device selection");
+    diagnosticLog("CONNECT","DEVICE_SELECTED",{attemptId,source:selection.source,device:diagnosticDeviceRef(selection.device)});
     const nextMesh=new TelinkMesh();
     mesh=nextMesh;
+    if(attempt.cancelled){ nextMesh.disconnect("cancelled before GATT connect"); assertConnectAttemptActive(attempt,"before GATT connect"); }
     await nextMesh.connect(selection.device);
+    if(attempt.cancelled){ nextMesh.disconnect("cancelled after GATT connect"); assertConnectAttemptActive(attempt,"after GATT connect"); }
     saveBluetoothDevice(nextMesh.device);
     syncPowerToggle();
-    setStatus("Connected ✓","on");
+    diagnosticLog("CONNECT","ATTEMPT_SUCCESS",{attemptId,durationMs:Math.round(performance.now()-attemptStarted),source:selection.source,powerKnown:nextMesh.powerStateKnown,power:powerOn?"ON":"OFF",presetId:activePresetId,presetSource:nextMesh.presetStateSource});
+    setStatus("connected","Connection and Telink login completed");
     $("controls").classList.add("ready");
   }catch(e){
-    if(mesh){ mesh.disconnect(); mesh=null; }
+    if(mesh){ mesh.disconnect("connect handler error cleanup"); mesh=null; }
     const message=e.message||String(e);
-    if(!selection&&e.name==="NotFoundError") setStatus("No device selected.","");
-    else if(selection?.remembered&&!message.startsWith("Light rejected pairing")){
-      forceChooserNextConnect=true;
-      setStatus("Saved projector is unavailable. Check its power, then tap Connect to choose it again.","err");
-    }else setStatus(message,"err");
+    if(attempt.cancelled){
+      diagnosticLog("CONNECT","ATTEMPT_CANCELLED_BY_LIFECYCLE",{attemptId,reason:attempt.cancelReason,durationMs:Math.round(performance.now()-attemptStarted)},"WARN");
+      setStatus("idle","Connection stopped for "+attempt.cancelReason);
+    }else{
+      diagnosticError("CONNECT","ATTEMPT_FAILED",e,{attemptId,durationMs:Math.round(performance.now()-attemptStarted),selectionSource:selection?.source||"none"});
+      if(!selection&&e.name==="NotFoundError") setStatus("idle","Device chooser cancelled");
+      else if(selection?.remembered&&!message.startsWith("Light rejected pairing")){
+        forceChooserNextConnect=true;
+        diagnosticLog("CONNECT","FORCE_CHOOSER_ARMED",{attemptId,reason:message},"WARN");
+        setStatus("error",message);
+      }else setStatus("error",message);
+    }
   }finally{
+    if(activeConnectAttempt===attempt) activeConnectAttempt=null;
     connectInProgress=false;
     $("connectBtn").disabled=false;
   }
@@ -793,12 +1370,26 @@ $("connectBtn").onclick=async()=>{
 // what caused rapid switching to desync the lamp from the UI.
 let cmdChain=Promise.resolve();
 function cmd(fn){
-  if(!mesh||!mesh.sessionKey){ setStatus("Connect first.","err"); return; }
-  cmdChain=cmdChain.then(async()=>{
-    try{ await fn(); await sleep(25); }   // small gap so writes don't stampede
-    catch(e){ setStatus("Send failed: "+(e.message||e),"err"); }
+  if(!mesh||!mesh.sessionKey){
+    diagnosticLog("TX","COMMAND_REJECTED",{reason:"no authenticated mesh session"},"WARN");
+    setStatus("error","Command requested without a connection");
+    return;
+  }
+  const queued=cmdChain.then(async()=>{
+    try{
+      const outcome=await fn();
+      if(outcome===false) return false;
+      await sleep(25); // small gap so writes don't stampede
+      return true;
+    }
+    catch(e){
+      if(!e?.skyliteDiagnosticLogged) diagnosticError("TX","COMMAND_QUEUE_FAILED",e);
+      setStatus("error","Send failed: "+(e.message||e));
+      return false;
+    }
   });
-  return cmdChain;
+  cmdChain=queued.then(()=>undefined);
+  return queued;
 }
 
 // Shared manual-control state. Hardware testing confirms that the full
@@ -817,15 +1408,16 @@ PRESETS.forEach(([id,label])=>{
   const b=document.createElement('button');
   b.dataset.presetId = id;
   b.innerHTML=`<span>${label}</span><span class="check">✓</span>`;
-  b.onclick=()=> selectPreset(id, true);
+  b.onclick=()=> selectPreset(id,true,"preset button");
   $("presets").appendChild(b);
 });
-setPresetSelection(activePresetId);
+setPresetSelection(activePresetId,"storage restore");
 
 // full-state color command (0x47) -- always sends every field
-function sendColor(){
-  stopPresetEffect();
+function sendColor(reason="manual control"){
+  stopPresetEffect(reason);
   hidePresetSelection();  // custom mode hides, but remembers, the last preset
+  diagnosticLog("MANUAL","STATE_REQUEST",{reason,r:st.r,g:st.g,b:st.b,laser:st.laser,brightness:st.bright,rotation:!!st.motor,rememberedPresetId:activePresetId});
   cmd(()=>mesh.setColor(
     st.r?255:0, st.g?255:0, st.b?255:0,
     BRIGHT_VALUES[st.bright], st.laser?255:0, st.motor
@@ -836,7 +1428,7 @@ function sendColor(){
 document.querySelectorAll("#colorChips button").forEach(chip=>{
   const ch=chip.dataset.ch;
   chip.classList.toggle("active",st[ch]);
-  chip.onclick=()=>{ st[ch]=!st[ch]; chip.classList.toggle("active",st[ch]); sendColor(); };
+  chip.onclick=()=>{ st[ch]=!st[ch]; chip.classList.toggle("active",st[ch]); sendColor("color "+ch+" changed"); };
 });
 
 // --- Brightness: three single-select buttons ---
@@ -847,7 +1439,7 @@ Object.entries(BRIGHT_NAMES).forEach(([value,label])=>{
   button.onclick=()=>{
     st.bright=Number(value);
     refreshManualUI();
-    sendColor();
+    sendColor("brightness changed to "+label);
   };
   $("brightnessOptions").appendChild(button);
 });
@@ -858,8 +1450,133 @@ refreshManualUI();
 $("rotationToggle").addEventListener("change",()=>{
   st.motor = $("rotationToggle").checked ? 255 : 0;
   refreshManualUI();
-  sendColor();
+  sendColor("rotation changed to "+(st.motor?"ON":"OFF"));
 });
+
+// --- Full-screen diagnostic log ---
+function currentDiagnosticSnapshot(){
+  const connected=!!(mesh?.sessionKey&&mesh.device?.gatt?.connected);
+  const gattConnected=!!mesh?.device?.gatt?.connected;
+  const preset=PRESETS.find(([id])=>id===activePresetId);
+  const activeTab=document.querySelector('.tab-button.active')?.dataset.tab||"unknown";
+  return {
+    connection:connected?"CONNECTED":(gattConnected?"GATT ONLY":"DISCONNECTED"),
+    power:powerOn?"ON":"OFF",
+    powerSource:connected&&mesh?.powerStateKnown?mesh.powerStateSource:"stored/UI; not device-confirmed",
+    preset:preset?.[1]||String(activePresetId),
+    presetId:activePresetId,
+    presetSource:connected&&mesh?.presetStateSource==="app-commanded"?"app-commanded":"stored/UI; not device-confirmed",
+    tab:activeTab,
+    manual:{r:st.r,g:st.g,b:st.b,laser:st.laser,brightness:st.bright,rotation:!!st.motor},
+    visibility:document.visibilityState,
+    forceChooserNextConnect,
+    logPersistence:diagnosticPersistenceState,
+    logPersistenceError:diagnosticPersistenceError||null
+  };
+}
+function updateDiagnosticSummary(){
+  const summary=$("diagnosticsSummary");
+  if(!summary) return;
+  const state=currentDiagnosticSnapshot();
+  summary.innerHTML=
+    '<div><span>Connection</span><strong>'+state.connection+'</strong></div>'+
+    '<div><span>Power</span><strong>'+state.power+' · '+(state.powerSource==="device-reported"?'device':state.powerSource==="app-commanded"?'app command':'cached')+'</strong></div>'+
+    '<div><span>Preset</span><strong>'+state.preset+'</strong></div>'+
+    '<div><span>Preset source</span><strong>'+(state.presetSource==="app-commanded"?'app command':'UI only · unconfirmed')+'</strong></div>';
+}
+function buildDiagnosticReport(){
+  const state=currentDiagnosticSnapshot();
+  return [
+    "Kitchenzky Sky Remote — Diagnostic Report",
+    "Build: "+APP_BUILD,
+    "Exported: "+new Date().toISOString(),
+    "Session: "+diagnosticSessionId,
+    "Log persistence: "+diagnosticPersistenceState+(diagnosticPersistenceError?" ("+diagnosticPersistenceError+")":""),
+    "Current state: "+JSON.stringify(state),
+    "Important: power and preset sources indicate whether the displayed state was reported, commanded by this app, or only restored from storage.",
+    "Bluetooth identifiers use session-local aliases. Passwords, login challenges and session keys are excluded.",
+    "",
+    "--- SAVED EVENTS (oldest to newest) ---",
+    diagnosticEntries.join("\n")
+  ].join("\n");
+}
+function openDiagnostics(){
+  diagnosticLog("DIAG","VIEW_OPEN",currentDiagnosticSnapshot());
+  $("diagnosticsView").hidden=false;
+  document.body.classList.add("diagnostics-open");
+  $("mainApp").inert=true;
+  $("mainApp").setAttribute("aria-hidden","true");
+  $("diagnosticsButton").setAttribute("aria-expanded","true");
+  $("diagnosticsToast").textContent="";
+  updateDiagnosticSummary();
+  renderDiagnosticEntries(true);
+  $("diagnosticsBack").focus();
+}
+function closeDiagnostics(){
+  diagnosticLog("DIAG","VIEW_CLOSE");
+  $("diagnosticsView").hidden=true;
+  document.body.classList.remove("diagnostics-open");
+  $("mainApp").inert=false;
+  $("mainApp").removeAttribute("aria-hidden");
+  $("diagnosticsButton").setAttribute("aria-expanded","false");
+  $("diagnosticsButton").focus();
+}
+function fallbackCopyDiagnosticText(text){
+  const area=document.createElement("textarea");
+  area.value=text;
+  area.setAttribute("readonly","");
+  area.style.position="fixed";
+  area.style.opacity="0";
+  document.body.appendChild(area);
+  area.select();
+  area.setSelectionRange?.(0,text.length);
+  const copied=document.execCommand("copy");
+  area.remove();
+  if(!copied) throw new Error("Clipboard copy was rejected");
+}
+async function copyDiagnostics(){
+  diagnosticLog("DIAG","COPY_REQUESTED",currentDiagnosticSnapshot());
+  const report=buildDiagnosticReport();
+  try{
+    if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(report);
+    else fallbackCopyDiagnosticText(report);
+    $("diagnosticsToast").textContent="Copied ✓";
+    diagnosticLog("DIAG","COPY_OK",{characters:report.length});
+  }catch(e){
+    try{
+      fallbackCopyDiagnosticText(report);
+      $("diagnosticsToast").textContent="Copied ✓";
+      diagnosticLog("DIAG","COPY_OK_FALLBACK",{characters:report.length});
+    }catch(fallbackError){
+      $("diagnosticsToast").textContent="Copy failed. Touch and hold the log to select it.";
+      diagnosticError("DIAG","COPY_FAILED",fallbackError);
+    }
+  }
+}
+function clearDiagnostics(){
+  if(!window.confirm("Clear the saved diagnostic history? Your projector and app settings will stay remembered.")) return;
+  diagnosticEntries=[];
+  persistDiagnosticEntries();
+  diagnosticLog("DIAG","HISTORY_CLEARED");
+  updateDiagnosticSummary();
+  renderDiagnosticEntries(true);
+  $("diagnosticsToast").textContent="Diagnostic history cleared ✓";
+}
+$("diagnosticsButton").addEventListener("click",openDiagnostics);
+$("diagnosticsBack").addEventListener("click",closeDiagnostics);
+$("diagnosticsCopy").addEventListener("click",copyDiagnostics);
+$("diagnosticsClear").addEventListener("click",clearDiagnostics);
+document.addEventListener("keydown",event=>{
+  const view=$("diagnosticsView");
+  if(event.key==="Escape"&&!view.hidden){ closeDiagnostics(); return; }
+  if(event.key!=="Tab"||view.hidden) return;
+  const focusable=Array.from(view.querySelectorAll('button:not([disabled]),[tabindex="0"]'));
+  if(!focusable.length) return;
+  const first=focusable[0],last=focusable[focusable.length-1];
+  if(event.shiftKey&&document.activeElement===first){ event.preventDefault(); last.focus(); }
+  else if(!event.shiftKey&&document.activeElement===last){ event.preventDefault(); first.focus(); }
+});
+renderDiagnosticEntries();
 
 // --- Clean disconnect ---
 // The lamp allows only one connection and STOPS ADVERTISING while it
@@ -867,18 +1584,62 @@ $("rotationToggle").addEventListener("change",()=>{
 // a "ghost connection": invisible to scans until power-cycled, even when
 // off. So actively disconnect when the page is hidden/closed, freeing the
 // lamp to advertise again -- this is what makes it findable while off.
-function releaseLamp(){
-  stopPresetEffect();
+function releaseLamp(reason="unknown lifecycle event"){
+  const now=performance.now();
+  const releaseStillNeeded=!!(mesh?.sessionKey||mesh?.device?.gatt?.connected||(activeConnectAttempt&&!activeConnectAttempt.cancelled));
+  if(lastLampReleaseAt&&now-lastLampReleaseAt<1500&&!releaseStillNeeded){
+    diagnosticLog("LIFECYCLE","RELEASE_SKIPPED_DUPLICATE",{reason,previousReleaseMsAgo:Math.round(now-lastLampReleaseAt)});
+    return;
+  }
+  lastLampReleaseAt=now;
+  diagnosticLog("LIFECYCLE","RELEASE_START",Object.assign({reason},currentDiagnosticSnapshot()));
+  stopPresetEffect("lifecycle: "+reason);
+  const selectionMayBeUsingNativePicker=reason==="visibility hidden"&&!mesh;
+  const hadPendingAttempt=!!(activeConnectAttempt&&!activeConnectAttempt.cancelled&&!selectionMayBeUsingNativePicker);
+  if(hadPendingAttempt){
+    activeConnectAttempt.cancelled=true;
+    activeConnectAttempt.cancelReason=reason;
+    diagnosticLog("CONNECT","ATTEMPT_CANCEL_REQUESTED",{attemptId:activeConnectAttempt.id,reason},"WARN");
+  }else if(activeConnectAttempt&&!activeConnectAttempt.cancelled&&selectionMayBeUsingNativePicker){
+    diagnosticLog("CONNECT","SELECTION_CANCEL_DEFERRED",{attemptId:activeConnectAttempt.id,reason:"native picker may have hidden the page"});
+  }
   const wasConnected=!!(mesh?.sessionKey||mesh?.device?.gatt?.connected);
-  try{ if(mesh) mesh.disconnect(); }catch(e){}
-  if(wasConnected){
-    setStatus("Disconnected — tap Connect to reconnect.","");
+  try{ if(mesh) mesh.disconnect("lifecycle: "+reason); }
+  catch(e){ diagnosticError("LIFECYCLE","RELEASE_DISCONNECT_FAILED",e,{reason}); }
+  if(wasConnected||hadPendingAttempt){
+    setStatus("idle","Disconnected for "+reason);
     $("controls").classList.remove("ready");
   }
+  diagnosticLog("LIFECYCLE","RELEASE_DONE",{reason,wasConnected,hadPendingAttempt,gattConnected:!!mesh?.device?.gatt?.connected,sessionPresent:!!mesh?.sessionKey,gattReleased:!mesh?.device?.gatt?.connected&&!mesh?.sessionKey,pendingAttemptPresent:!!activeConnectAttempt});
 }
-window.addEventListener("pagehide", releaseLamp);
-window.addEventListener("beforeunload", releaseLamp);
-document.addEventListener("visibilitychange", ()=>{ if(document.hidden) releaseLamp(); });
+let lastLampReleaseAt=0;
+window.addEventListener("pageshow",event=>{
+  lastLampReleaseAt=0;
+  diagnosticSessionEnded=false;
+  markDiagnosticSessionActive();
+  diagnosticLog("LIFECYCLE","PAGESHOW",{persisted:!!event.persisted,visibility:document.visibilityState});
+});
+window.addEventListener("pagehide",event=>{
+  diagnosticLog("LIFECYCLE","PAGEHIDE",{persisted:!!event.persisted});
+  releaseLamp("pagehide");
+  if(!event.persisted) endDiagnosticSession("pagehide");
+});
+window.addEventListener("beforeunload",()=>{
+  diagnosticLog("LIFECYCLE","BEFOREUNLOAD");
+  releaseLamp("beforeunload");
+  endDiagnosticSession("beforeunload");
+});
+document.addEventListener("visibilitychange",()=>{
+  diagnosticLog("LIFECYCLE","VISIBILITY_CHANGE",{visibility:document.visibilityState});
+  if(document.hidden) releaseLamp("visibility hidden");
+});
+try{
+  navigator.bluetooth?.addEventListener?.("backgroundstatechanged",event=>{
+    const rawValue=event?.value??event?.detail??"unknown";
+    const value=(typeof rawValue==="string"||typeof rawValue==="number"||typeof rawValue==="boolean") ? diagnosticSafeText(rawValue,120) : Object.prototype.toString.call(rawValue);
+    diagnosticLog("LIFECYCLE","BLUEFY_BACKGROUND_STATE",{value});
+  });
+}catch(e){ diagnosticError("LIFECYCLE","BLUEFY_BACKGROUND_LISTENER_FAILED",e); }
 </script>
 </body>
 </html>

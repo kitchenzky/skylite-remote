@@ -372,7 +372,7 @@ const enc=s=>new TextEncoder().encode(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-21-diagnostics-10";
+const APP_BUILD="2026-07-21-diagnostics-11";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -726,7 +726,6 @@ class TelinkMesh{
       diagnosticLog("STATE","CONNECT_POWER_ON_START",{previous:powerOn?"ON":"OFF",passiveStateKnown:this.powerStateKnown});
       await this._connectAwait(this.setPower(true),"connect power-on synchronization");
       this._setCommandedPowerState(true,"successful Connect");
-      await this._connectAwait(sleep(100),"connect power-on settle");
       const presetToRestore=activePresetId;
       diagnosticLog("PRESET","CONNECT_RESTORE_START",{
         presetId:presetToRestore,
@@ -1045,7 +1044,13 @@ function setPresetSelection(id,source="UI"){
 function releasePresetEffectWakeLock(){
   if(bluefyScreenDimDisabled){
     bluefyScreenDimDisabled=false;
-    try{ navigator.bluetooth?.setScreenDimEnabled?.(true); }catch(e){ }
+    try{
+      const restoreResult=navigator.bluetooth?.setScreenDimEnabled?.(true);
+      if(restoreResult&&typeof restoreResult.catch==="function"){
+        restoreResult.catch(e=>diagnosticError("PRESET","SCREEN_DIM_RESTORE_FAILED",e));
+      }
+      diagnosticLog("PRESET","SCREEN_DIM_RESTORE_REQUESTED");
+    }catch(e){ diagnosticError("PRESET","SCREEN_DIM_RESTORE_FAILED",e); }
   }
   const lock=presetEffectWakeLock;
   presetEffectWakeLock=null;
@@ -1055,12 +1060,21 @@ async function keepPresetEffectAwake(generation){
   if(generation!==presetEffectGeneration || document.hidden) return;
   if(typeof navigator.bluetooth?.setScreenDimEnabled==="function"){
     try{
-      navigator.bluetooth.setScreenDimEnabled(false);
+      await navigator.bluetooth.setScreenDimEnabled(false);
+      if(generation!==presetEffectGeneration || document.hidden || !isAnimatedPreset(activePresetId)){
+        try{ await navigator.bluetooth.setScreenDimEnabled(true); }
+        catch(e){ diagnosticError("PRESET","SCREEN_DIM_STALE_RESTORE_FAILED",e); }
+        return;
+      }
       bluefyScreenDimDisabled=true;
+      diagnosticLog("PRESET","SCREEN_DIM_DISABLED",{method:"Bluefy API",presetId:activePresetId});
       return;
-    }catch(e){ }
+    }catch(e){ diagnosticError("PRESET","SCREEN_DIM_DISABLE_FAILED",e,{fallback:"Screen Wake Lock"}); }
   }
-  if(!navigator.wakeLock || presetEffectWakeLock) return;
+  if(!navigator.wakeLock || presetEffectWakeLock){
+    if(!navigator.wakeLock) diagnosticLog("PRESET","WAKE_LOCK_UNAVAILABLE",{presetId:activePresetId},"WARN");
+    return;
+  }
   try{
     const lock=await navigator.wakeLock.request("screen");
     if(generation!==presetEffectGeneration || document.hidden || !isAnimatedPreset(activePresetId)){
@@ -1068,10 +1082,12 @@ async function keepPresetEffectAwake(generation){
       return;
     }
     presetEffectWakeLock=lock;
+    diagnosticLog("PRESET","WAKE_LOCK_ACQUIRED",{method:"Screen Wake Lock",presetId:activePresetId});
     lock.addEventListener("release",()=>{
       if(presetEffectWakeLock===lock) presetEffectWakeLock=null;
+      diagnosticLog("PRESET","WAKE_LOCK_RELEASED",{presetId:activePresetId});
     });
-  }catch(e){ }
+  }catch(e){ diagnosticError("PRESET","WAKE_LOCK_FAILED",e,{presetId:activePresetId}); }
 }
 let activeAnimatedPresetId=null;
 function stopPresetEffect(reason="state change"){

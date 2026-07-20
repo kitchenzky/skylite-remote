@@ -372,7 +372,7 @@ const enc=s=>new TextEncoder().encode(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-20-diagnostics-9";
+const APP_BUILD="2026-07-21-diagnostics-10";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -1339,37 +1339,38 @@ $("connectBtn").onclick=async()=>{
     let nextMesh=new TelinkMesh();
     mesh=nextMesh;
     if(attempt.cancelled){ nextMesh.disconnect("cancelled before GATT connect"); assertConnectAttemptActive(attempt,"before GATT connect"); }
-    const rememberedGattRetryDelays=[900,1800,3200,4800];
-    let rememberedGattRetryIndex=0;
-    while(true){
+    try{
+      await nextMesh.connect(selection.device);
+    }catch(connectError){
+      const failedStage=connectError?.telinkConnectStage||nextMesh.lastConnectFailureStage;
+      const canUseChooserFallback=selection.remembered&&connectError?.name!=="AbortError"&&
+        failedStage==="gatt connect"&&!attempt.cancelled;
+      if(!canUseChooserFallback) throw connectError;
+      diagnosticLog("CONNECT","REMEMBERED_GATT_CHOOSER_FALLBACK",{
+        attemptId,reason:connectError?.message||String(connectError),device:diagnosticDeviceRef(selection.device)
+      },"WARN");
+      mesh=null; // Native picker visibility changes must not cancel this attempt.
+      selection=null;
       try{
-        await nextMesh.connect(selection.device);
-        if(rememberedGattRetryIndex){
-          diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SUCCESS",{attemptId,retryNumber:rememberedGattRetryIndex});
-        }
-        break;
-      }catch(connectError){
-        const failedStage=connectError?.telinkConnectStage||nextMesh.lastConnectFailureStage;
-        const canRetryRememberedDevice=selection.remembered&&connectError?.name!=="AbortError"&&
-          failedStage==="gatt connect"&&!attempt.cancelled&&rememberedGattRetryIndex<rememberedGattRetryDelays.length;
-        if(!canRetryRememberedDevice) throw connectError;
-        const retryNumber=++rememberedGattRetryIndex;
-        const delayMs=rememberedGattRetryDelays[retryNumber-1];
-        diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SCHEDULED",{
-          attemptId,retryNumber,maxRetries:rememberedGattRetryDelays.length,delayMs,
-          reason:connectError?.message||String(connectError),device:diagnosticDeviceRef(selection.device)
-        },"WARN");
-        try{
-          if(selection.device?.gatt?.connected) selection.device.gatt.disconnect();
-        }catch(disconnectError){
-          diagnosticError("CONNECT","REMEMBERED_GATT_RETRY_RELEASE_FAILED",disconnectError,{attemptId,retryNumber});
-        }
-        await sleep(delayMs);
-        assertConnectAttemptActive(attempt,"remembered-device retry delay");
-        diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_START",{attemptId,retryNumber,device:diagnosticDeviceRef(selection.device)});
-        nextMesh=new TelinkMesh();
-        mesh=nextMesh;
+        selection=await selectBluetoothDevice(true);
+      }catch(chooserError){
+        forceChooserNextConnect=true;
+        diagnosticError("CONNECT","FALLBACK_CHOOSER_FAILED",chooserError,{attemptId});
+        throw chooserError;
       }
+      if(document.hidden&&!attempt.cancelled){
+        diagnosticLog("CONNECT","FALLBACK_SELECTION_RESOLVED_WHILE_HIDDEN",{attemptId},"WARN");
+        await sleep(80);
+        if(document.hidden&&!attempt.cancelled){
+          attempt.cancelled=true;
+          attempt.cancelReason="fallback device selection completed while app remained hidden";
+        }
+      }
+      assertConnectAttemptActive(attempt,"fallback device selection");
+      diagnosticLog("CONNECT","FALLBACK_DEVICE_SELECTED",{attemptId,source:selection.source,device:diagnosticDeviceRef(selection.device)});
+      nextMesh=new TelinkMesh();
+      mesh=nextMesh;
+      await nextMesh.connect(selection.device);
     }
     if(attempt.cancelled){ nextMesh.disconnect("cancelled after GATT connect"); assertConnectAttemptActive(attempt,"after GATT connect"); }
     saveBluetoothDevice(nextMesh.device);

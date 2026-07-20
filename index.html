@@ -99,6 +99,8 @@
   .grid button:nth-child(6){animation-delay:175ms;}
   .grid button:nth-child(7){animation-delay:210ms;}
   .grid button:nth-child(8){animation-delay:245ms;}
+  .grid button:nth-child(9){animation-delay:280ms;}
+  .grid button:nth-child(10){animation-delay:315ms;}
   .brightness-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
   .rotation-control{display:flex; align-items:center; justify-content:center; gap:12px; min-height:42px;}
   .rotation-switch{--switch-width:56px; --switch-height:32px; --switch-knob:24px;
@@ -299,8 +301,20 @@ const REAL_MAC="A4C1385A60D1";                    // this light's hardware MAC
 const VENDOR=0x0211;
 const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47;
 const DEFAULT_PRESET_ID=1;
+const COSMIC_PULSE_ID=100;
+const PRISM_PULSE_ID=101;
+const PERFECT_BLUE_ID=102;
 const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
-               [6,"Space"],[8,"Sunrise"],[2,"Fading"],[9,"RGB switch"]];
+               [6,"Space"],[8,"Sunrise"],[PERFECT_BLUE_ID,"Perfect Blue"],
+               [COSMIC_PULSE_ID,"Cosmic Pulse"],[PRISM_PULSE_ID,"RGB Pulse"],[2,"Fading"]];
+const SMOOTH_PULSE_STEPS=96;
+const SMOOTH_PULSE_DELAY=85;
+const COSMIC_LASER_MIN=32;
+const PERFECT_BLUE_FLOOR=64;
+const PRISM_PULSE_COLORS=[[255,0,0],[0,0,255],[0,255,0]];
+const PRISM_TRANSITION_STEPS=144;
+const PRISM_PULSE_DELAY=100;
+const PRISM_PULSE_FLOOR=.55;
 
 /* ============================ Mesh class ============================ */
 class TelinkMesh{
@@ -320,6 +334,8 @@ class TelinkMesh{
     });
     this.device.addEventListener('gattserverdisconnected',()=>{
       this.sessionKey=null;
+      if(mesh!==this) return;
+      stopPresetEffect();
       setStatus("Disconnected — tap Connect to reconnect.","");
       $("controls").classList.remove("ready");
     });
@@ -375,7 +391,8 @@ class TelinkMesh{
   }
   queryStatus(){ return this._send(0xDA, new Uint8Array(0)); }
   _setReportedPowerState(state){
-    if(state===null) return;
+    if(state===null || mesh!==this) return;
+    if(!state) stopPresetEffect();
     this.powerStateKnown=true;
     powerOn=state;
     savePowerState();
@@ -445,6 +462,8 @@ function loadPresetState(){
 }
 let powerOn = loadPowerState();
 let activePresetId = loadPresetState() ?? DEFAULT_PRESET_ID;
+let presetEffectTimer=null;
+let presetEffectGeneration=0;
 function savePowerState(){
   try{ localStorage.setItem(POWER_STORAGE_KEY,powerOn?"on":"off"); }catch(e){ }
 }
@@ -476,9 +495,112 @@ function setPresetSelection(id){
     btn.classList.toggle('active', btn.dataset.presetId===String(id));
   });
 }
+function stopPresetEffect(){
+  presetEffectGeneration++;
+  if(presetEffectTimer!==null){
+    clearTimeout(presetEffectTimer);
+    presetEffectTimer=null;
+  }
+}
+function isAnimatedPreset(id){
+  return id===COSMIC_PULSE_ID || id===PRISM_PULSE_ID || id===PERFECT_BLUE_ID;
+}
+function presetEffectIsCurrent(generation,runMesh,id){
+  return generation===presetEffectGeneration &&
+    mesh===runMesh &&
+    activePresetId===id &&
+    $("presetsTab").classList.contains("active") &&
+    runMesh?.sessionKey && runMesh.device?.gatt?.connected;
+}
+function prismPulseFrame(index){
+  const phase=Math.floor(index/PRISM_TRANSITION_STEPS)%PRISM_PULSE_COLORS.length;
+  const step=index%PRISM_TRANSITION_STEPS;
+  const from=PRISM_PULSE_COLORS[phase];
+  const to=PRISM_PULSE_COLORS[(phase+1)%PRISM_PULSE_COLORS.length];
+  const t=step/PRISM_TRANSITION_STEPS;
+  const eased=(1-Math.cos(Math.PI*t))/2;
+  const fadeOut=Math.cos(eased*Math.PI/2);
+  const fadeIn=Math.sin(eased*Math.PI/2);
+  const pulseWave=Math.cos(Math.PI*t);
+  const intensity=PRISM_PULSE_FLOOR+(1-PRISM_PULSE_FLOOR)*pulseWave*pulseWave;
+  return [
+    Math.round((from[0]*fadeOut+to[0]*fadeIn)*intensity),
+    Math.round((from[1]*fadeOut+to[1]*fadeIn)*intensity),
+    Math.round((from[2]*fadeOut+to[2]*fadeIn)*intensity),
+    0
+  ];
+}
+function smoothPulseWave(index){
+  const phase=(index%SMOOTH_PULSE_STEPS)/SMOOTH_PULSE_STEPS;
+  return (1+Math.cos(2*Math.PI*phase))/2;
+}
+function cosmicPulseLaser(index){
+  const wave=smoothPulseWave(index);
+  return Math.round(COSMIC_LASER_MIN+(255-COSMIC_LASER_MIN)*wave);
+}
+function perfectBlueFrame(index){
+  const wave=smoothPulseWave(index);
+  const blue=Math.round(PERFECT_BLUE_FLOOR+(255-PERFECT_BLUE_FLOOR)*wave);
+  const laser=Math.round(PERFECT_BLUE_FLOOR+(255-PERFECT_BLUE_FLOOR)*(1-wave));
+  return [0,0,blue,laser];
+}
+function animatedPresetFrame(id,index){
+  if(id===COSMIC_PULSE_ID){
+    return [255,0,255,cosmicPulseLaser(index)];
+  }
+  if(id===PERFECT_BLUE_ID) return perfectBlueFrame(index);
+  return prismPulseFrame(index);
+}
+function animatedPresetDelay(id){
+  return id===PRISM_PULSE_ID ? PRISM_PULSE_DELAY : SMOOTH_PULSE_DELAY;
+}
+async function sendAnimatedPresetFrame(runMesh,id,index){
+  const frame=animatedPresetFrame(id,index);
+  await runMesh.setColor(frame[0],frame[1],frame[2],3,frame[3],255);
+}
+function schedulePresetEffect(generation,runMesh,id,index){
+  if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+  presetEffectTimer=setTimeout(()=>{
+    presetEffectTimer=null;
+    if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+    const queued=cmd(async()=>{
+      if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+      await sendAnimatedPresetFrame(runMesh,id,index);
+    });
+    if(queued) queued.then(()=>{
+      if(presetEffectIsCurrent(generation,runMesh,id)){
+        schedulePresetEffect(generation,runMesh,id,index+1);
+      }
+    });
+  },animatedPresetDelay(id));
+}
+function applyPreset(id){
+  stopPresetEffect();
+  const generation=presetEffectGeneration;
+  const runMesh=mesh;
+  const animated=isAnimatedPreset(id);
+  const queued=cmd(async()=>{
+    if(mesh!==runMesh || !runMesh?.sessionKey || !runMesh.device?.gatt?.connected) return;
+    if(animated){
+      if(!presetEffectIsCurrent(generation,runMesh,id)) return;
+      await sendAnimatedPresetFrame(runMesh,id,0);
+    }else{
+      await runMesh.loadScene(id);
+    }
+  });
+  if(animated && queued){
+    queued.then(()=>{
+      if(presetEffectIsCurrent(generation,runMesh,id)){
+        schedulePresetEffect(generation,runMesh,id,1);
+      }
+    });
+  }
+  return queued;
+}
 function selectPreset(id, send=true){
   setPresetSelection(id);
-  if(send) cmd(()=>mesh.loadScene(id));
+  if(send) applyPreset(id);
+  else stopPresetEffect();
 }
 function hidePresetSelection(){
   document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('active'));
@@ -494,7 +616,7 @@ function activateTab(tabId){
   if(tabId==='presetsTab'){
     const presetId=activePresetId;
     setPresetSelection(presetId);
-    cmd(()=>mesh.loadScene(presetId));
+    applyPreset(presetId);
   }
 }
 document.querySelectorAll('.tab-button').forEach(btn=>{
@@ -503,6 +625,7 @@ document.querySelectorAll('.tab-button').forEach(btn=>{
 if(powerToggle){
   powerToggle.addEventListener("change", ()=>{
     const next = powerToggle.checked;
+    stopPresetEffect();
     cmd(async ()=>{
       await mesh.setPower(next);
       powerOn = next;
@@ -528,6 +651,7 @@ window.onCommandSent=(cmdByte,data,pkt)=>{
 $("connectBtn").onclick=async()=>{
   if(!navigator.bluetooth){ setStatus("This browser has no Bluetooth. Open this page in the Bluefy app.","err"); return; }
   try{
+    stopPresetEffect();
     setStatus("Connecting…","");
     mesh=new TelinkMesh();
     await mesh.connect();
@@ -557,9 +681,9 @@ const st={r:true,g:true,b:true,laser:true, bright:3, motor:255};
 const BRIGHT_NAMES={1:"Low",2:"Medium",3:"High"};
 const BRIGHT_VALUES={1:1,2:2,3:3};
 const BRIGHT_ICONS={
-  1:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 4h.01"/><path d="M20 12h.01"/><path d="M12 20h.01"/><path d="M4 12h.01"/><path d="M17.657 6.343h.01"/><path d="M17.657 17.657h.01"/><path d="M6.343 17.657h.01"/><path d="M6.343 6.343h.01"/></svg>',
-  2:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v1"/><path d="M12 20v1"/><path d="M3 12h1"/><path d="M20 12h1"/><path d="m18.364 5.636-.707.707"/><path d="m6.343 17.657-.707.707"/><path d="m5.636 5.636.707.707"/><path d="m17.657 17.657.707.707"/></svg>',
-  3:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>'
+  low:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 4h.01"/><path d="M20 12h.01"/><path d="M12 20h.01"/><path d="M4 12h.01"/></svg>',
+  medium:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 4h.01"/><path d="M20 12h.01"/><path d="M12 20h.01"/><path d="M4 12h.01"/><path d="M17.657 6.343h.01"/><path d="M17.657 17.657h.01"/><path d="M6.343 17.657h.01"/><path d="M6.343 6.343h.01"/></svg>',
+  high:'<svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>'
 };
 
 // build preset buttons (single-select, with a check marker on the right)
@@ -574,6 +698,7 @@ setPresetSelection(activePresetId);
 
 // full-state color command (0x47) -- always sends every field
 function sendColor(){
+  stopPresetEffect();
   hidePresetSelection();  // custom mode hides, but remembers, the last preset
   cmd(()=>mesh.setColor(
     st.r?255:0, st.g?255:0, st.b?255:0,
@@ -592,7 +717,7 @@ document.querySelectorAll("#colorChips button").forEach(chip=>{
 Object.entries(BRIGHT_NAMES).forEach(([value,label])=>{
   const button=document.createElement("button");
   button.dataset.brightness=value;
-  button.innerHTML=`<span class="color-label">${BRIGHT_ICONS[value]}${label}</span><span class="check">✓</span>`;
+  button.innerHTML=`<span class="color-label">${BRIGHT_ICONS[label.toLowerCase()]}${label}</span><span class="check">✓</span>`;
   button.onclick=()=>{
     st.bright=Number(value);
     refreshManualUI();
@@ -617,6 +742,7 @@ $("rotationToggle").addEventListener("change",()=>{
 // off. So actively disconnect when the page is hidden/closed, freeing the
 // lamp to advertise again -- this is what makes it findable while off.
 function releaseLamp(){
+  stopPresetEffect();
   try{ if(mesh && mesh.device && mesh.device.gatt && mesh.device.gatt.connected) mesh.device.gatt.disconnect(); }catch(e){}
 }
 window.addEventListener("pagehide", releaseLamp);

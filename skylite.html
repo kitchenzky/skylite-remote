@@ -310,7 +310,8 @@ const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
 const SMOOTH_PULSE_STEPS=96;
 const SMOOTH_PULSE_DELAY=85;
 const COSMIC_LASER_MIN=32;
-const PERFECT_BLUE_FLOOR=64;
+const PERFECT_BLUE_COLOR_MIN=64;
+const PERFECT_BLUE_LASER_MIN=16;
 const PRISM_PULSE_COLORS=[[255,0,0],[0,0,255],[0,255,0]];
 const PRISM_TRANSITION_STEPS=144;
 const PRISM_PULSE_DELAY=100;
@@ -464,6 +465,8 @@ let powerOn = loadPowerState();
 let activePresetId = loadPresetState() ?? DEFAULT_PRESET_ID;
 let presetEffectTimer=null;
 let presetEffectGeneration=0;
+let presetEffectWakeLock=null;
+let bluefyScreenDimDisabled=false;
 function savePowerState(){
   try{ localStorage.setItem(POWER_STORAGE_KEY,powerOn?"on":"off"); }catch(e){ }
 }
@@ -495,12 +498,44 @@ function setPresetSelection(id){
     btn.classList.toggle('active', btn.dataset.presetId===String(id));
   });
 }
+function releasePresetEffectWakeLock(){
+  if(bluefyScreenDimDisabled){
+    bluefyScreenDimDisabled=false;
+    try{ navigator.bluetooth?.setScreenDimEnabled?.(true); }catch(e){ }
+  }
+  const lock=presetEffectWakeLock;
+  presetEffectWakeLock=null;
+  if(lock) lock.release().catch(()=>{});
+}
+async function keepPresetEffectAwake(generation){
+  if(generation!==presetEffectGeneration || document.hidden) return;
+  if(typeof navigator.bluetooth?.setScreenDimEnabled==="function"){
+    try{
+      navigator.bluetooth.setScreenDimEnabled(false);
+      bluefyScreenDimDisabled=true;
+      return;
+    }catch(e){ }
+  }
+  if(!navigator.wakeLock || presetEffectWakeLock) return;
+  try{
+    const lock=await navigator.wakeLock.request("screen");
+    if(generation!==presetEffectGeneration || document.hidden || !isAnimatedPreset(activePresetId)){
+      await lock.release();
+      return;
+    }
+    presetEffectWakeLock=lock;
+    lock.addEventListener("release",()=>{
+      if(presetEffectWakeLock===lock) presetEffectWakeLock=null;
+    });
+  }catch(e){ }
+}
 function stopPresetEffect(){
   presetEffectGeneration++;
   if(presetEffectTimer!==null){
     clearTimeout(presetEffectTimer);
     presetEffectTimer=null;
   }
+  releasePresetEffectWakeLock();
 }
 function isAnimatedPreset(id){
   return id===COSMIC_PULSE_ID || id===PRISM_PULSE_ID || id===PERFECT_BLUE_ID;
@@ -540,8 +575,8 @@ function cosmicPulseLaser(index){
 }
 function perfectBlueFrame(index){
   const wave=smoothPulseWave(index);
-  const blue=Math.round(PERFECT_BLUE_FLOOR+(255-PERFECT_BLUE_FLOOR)*wave);
-  const laser=Math.round(PERFECT_BLUE_FLOOR+(255-PERFECT_BLUE_FLOOR)*(1-wave));
+  const blue=Math.round(PERFECT_BLUE_COLOR_MIN+(255-PERFECT_BLUE_COLOR_MIN)*wave);
+  const laser=Math.round(PERFECT_BLUE_LASER_MIN+(255-PERFECT_BLUE_LASER_MIN)*(1-wave));
   return [0,0,blue,laser];
 }
 function animatedPresetFrame(id,index){
@@ -553,6 +588,11 @@ function animatedPresetFrame(id,index){
 }
 function animatedPresetDelay(id){
   return id===PRISM_PULSE_ID ? PRISM_PULSE_DELAY : SMOOTH_PULSE_DELAY;
+}
+function animatedPresetFrameCount(id){
+  return id===PRISM_PULSE_ID
+    ? PRISM_TRANSITION_STEPS*PRISM_PULSE_COLORS.length
+    : SMOOTH_PULSE_STEPS;
 }
 async function sendAnimatedPresetFrame(runMesh,id,index){
   const frame=animatedPresetFrame(id,index);
@@ -569,7 +609,8 @@ function schedulePresetEffect(generation,runMesh,id,index){
     });
     if(queued) queued.then(()=>{
       if(presetEffectIsCurrent(generation,runMesh,id)){
-        schedulePresetEffect(generation,runMesh,id,index+1);
+        const nextIndex=(index+1)%animatedPresetFrameCount(id);
+        schedulePresetEffect(generation,runMesh,id,nextIndex);
       }
     });
   },animatedPresetDelay(id));
@@ -589,6 +630,7 @@ function applyPreset(id){
     }
   });
   if(animated && queued){
+    keepPresetEffectAwake(generation);
     queued.then(()=>{
       if(presetEffectIsCurrent(generation,runMesh,id)){
         schedulePresetEffect(generation,runMesh,id,1);

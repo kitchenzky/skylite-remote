@@ -372,7 +372,7 @@ const enc=s=>new TextEncoder().encode(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-20-diagnostics-8";
+const APP_BUILD="2026-07-20-diagnostics-9";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -1339,28 +1339,37 @@ $("connectBtn").onclick=async()=>{
     let nextMesh=new TelinkMesh();
     mesh=nextMesh;
     if(attempt.cancelled){ nextMesh.disconnect("cancelled before GATT connect"); assertConnectAttemptActive(attempt,"before GATT connect"); }
-    try{
-      await nextMesh.connect(selection.device);
-    }catch(firstError){
-      const firstFailureStage=firstError?.telinkConnectStage||nextMesh.lastConnectFailureStage;
-      const canRetryRememberedDevice=selection.remembered&&firstError?.name!=="AbortError"&&
-        firstFailureStage==="gatt connect"&&!attempt.cancelled;
-      if(!canRetryRememberedDevice) throw firstError;
-      diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SCHEDULED",{
-        attemptId,delayMs:900,reason:firstError?.message||String(firstError),device:diagnosticDeviceRef(selection.device)
-      },"WARN");
+    const rememberedGattRetryDelays=[900,1800,3200,4800];
+    let rememberedGattRetryIndex=0;
+    while(true){
       try{
-        if(selection.device?.gatt?.connected) selection.device.gatt.disconnect();
-      }catch(disconnectError){
-        diagnosticError("CONNECT","REMEMBERED_GATT_RETRY_RELEASE_FAILED",disconnectError,{attemptId});
+        await nextMesh.connect(selection.device);
+        if(rememberedGattRetryIndex){
+          diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SUCCESS",{attemptId,retryNumber:rememberedGattRetryIndex});
+        }
+        break;
+      }catch(connectError){
+        const failedStage=connectError?.telinkConnectStage||nextMesh.lastConnectFailureStage;
+        const canRetryRememberedDevice=selection.remembered&&connectError?.name!=="AbortError"&&
+          failedStage==="gatt connect"&&!attempt.cancelled&&rememberedGattRetryIndex<rememberedGattRetryDelays.length;
+        if(!canRetryRememberedDevice) throw connectError;
+        const retryNumber=++rememberedGattRetryIndex;
+        const delayMs=rememberedGattRetryDelays[retryNumber-1];
+        diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SCHEDULED",{
+          attemptId,retryNumber,maxRetries:rememberedGattRetryDelays.length,delayMs,
+          reason:connectError?.message||String(connectError),device:diagnosticDeviceRef(selection.device)
+        },"WARN");
+        try{
+          if(selection.device?.gatt?.connected) selection.device.gatt.disconnect();
+        }catch(disconnectError){
+          diagnosticError("CONNECT","REMEMBERED_GATT_RETRY_RELEASE_FAILED",disconnectError,{attemptId,retryNumber});
+        }
+        await sleep(delayMs);
+        assertConnectAttemptActive(attempt,"remembered-device retry delay");
+        diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_START",{attemptId,retryNumber,device:diagnosticDeviceRef(selection.device)});
+        nextMesh=new TelinkMesh();
+        mesh=nextMesh;
       }
-      await sleep(900);
-      assertConnectAttemptActive(attempt,"remembered-device retry delay");
-      diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_START",{attemptId,device:diagnosticDeviceRef(selection.device)});
-      nextMesh=new TelinkMesh();
-      mesh=nextMesh;
-      await nextMesh.connect(selection.device);
-      diagnosticLog("CONNECT","REMEMBERED_GATT_RETRY_SUCCESS",{attemptId});
     }
     if(attempt.cancelled){ nextMesh.disconnect("cancelled after GATT connect"); assertConnectAttemptActive(attempt,"after GATT connect"); }
     saveBluetoothDevice(nextMesh.device);

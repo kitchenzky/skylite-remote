@@ -401,7 +401,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-1";
+const APP_BUILD="2026-07-22-native-3";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
@@ -1496,12 +1496,18 @@ async function acquirePresetWakeLock(generation){
 }
 function keepPresetEffectAwake(generation){
   if(!presetWakeIsNeeded(generation)) return;
+  // Native CoreBluetooth owns animated playback and continues when WebKit is
+  // backgrounded, so a browser screen wake lock is unnecessary there.
+  if(NATIVE_SKY_BLUETOOTH) return;
   requestBluefyScreenDim(false,generation,{immediate:true});
   acquirePresetWakeLock(generation);
 }
 let activeAnimatedPresetId=null;
 function stopPresetEffect(reason="state change",{deferWakeRelease=false,preserveScreenDim=false}={}){
   if(activeAnimatedPresetId!==null){
+    if(NATIVE_SKY_BLUETOOTH){
+      NATIVE_SKY_BLUETOOTH.stopAnimation({reason}).catch(error=>diagnosticError("NATIVE","BACKGROUND_ANIMATION_STOP_FAILED",error,{reason}));
+    }
     mesh?._flushAnimationNotificationSummary?.("animation stopped: "+reason);
     diagnosticLog("PRESET","ANIMATION_STOP",{presetId:activeAnimatedPresetId,reason});
     activeAnimatedPresetId=null;
@@ -1686,7 +1692,7 @@ async function sendAnimatedPresetFrame(runMesh,id,index,generation){
           lastLocalFrame:runMesh.lastAnimationLocalFrame
         },"WARN");
       }
-      armPresetEffectWatchdog(generation,runMesh,id);
+      if(!NATIVE_SKY_BLUETOOTH) armPresetEffectWatchdog(generation,runMesh,id);
       return true;
     }catch(error){
       presetEffectConsecutiveFailures++;
@@ -1771,6 +1777,42 @@ function beginPresetEffect(generation,runMesh,id,nextIndex,source){
   presetEffectConsecutiveFailures=0;
   diagnosticLog("PRESET","ANIMATION_START",{presetId:id,frameCount:animatedPresetFrameCount(id),delayMs:animatedPresetDelay(id),source});
   keepPresetEffectAwake(generation);
+  if(NATIVE_SKY_BLUETOOTH){
+    // The initial frame is sent through the shared JavaScript path before the
+    // native engine starts. Cancel any browser watchdog left by that handoff.
+    if(presetEffectWatchdogTimer!==null){
+      clearTimeout(presetEffectWatchdogTimer);
+      presetEffectWatchdogTimer=null;
+    }
+    if(presetEffectTimer!==null){
+      clearTimeout(presetEffectTimer);
+      presetEffectTimer=null;
+    }
+    // Reserve sequence numbers for Swift so later foreground commands cannot
+    // collide with frames emitted while WebKit is suspended in the background.
+    const nativeSequence=runMesh.seq;
+    const reservedSequenceCount=1000000;
+    runMesh.seq=((runMesh.seq-1+reservedSequenceCount)%0xFFFFFF)+1;
+    NATIVE_SKY_BLUETOOTH.startAnimation({
+      presetId:id,
+      frameIndex:nextIndex,
+      sequence:nativeSequence,
+      destination:runMesh.dst,
+      sessionKey:nativeBufferToHex(runMesh.sessionKey),
+      macReversed:nativeBufferToHex(runMesh.macRev)
+    }).then(()=>diagnosticLog("NATIVE","BACKGROUND_ANIMATION_READY",{
+      presetId:id,frameIndex:nextIndex,reservedSequenceCount
+    })).catch(error=>{
+      diagnosticError("NATIVE","BACKGROUND_ANIMATION_START_FAILED",error,{presetId:id});
+      if(presetEffectIntentIsCurrent(generation,id)){
+        stopPresetEffect("native animation start failed");
+        connectionReady=false;
+        runMesh.disconnect("native animation start failed");
+        updateControlAvailability();
+      }
+    });
+    return true;
+  }
   armPresetEffectWatchdog(generation,runMesh,id);
   schedulePresetEffect(generation,runMesh,id,nextIndex);
   return true;
@@ -1987,7 +2029,7 @@ if(powerToggle){
   });
 }
 
-const MAIN_STATUS_IDLE='Tap Connect, then pick "BlissLights".';
+const MAIN_STATUS_IDLE=NATIVE_SKY_BLUETOOTH?'Tap Connect.':'Tap Connect, then pick "BlissLights".';
 function setStatus(state,detail=""){
   const s=$("status");
   if(state==="connected"){
@@ -2007,6 +2049,7 @@ let connectInProgress=false;
 let forceChooserNextConnect=false;
 let connectAttemptCounter=0;
 let activeConnectAttempt=null;
+let nativeAutoConnectTimer=null;
 let foregroundResumeDevice=null;
 let foregroundResumeWanted=false;
 let foregroundResumeGeneration=0;
@@ -2081,7 +2124,7 @@ $("connectBtn").onclick=async()=>{
     }catch(connectError){
       const failedStage=connectError?.telinkConnectStage||nextMesh.lastConnectFailureStage;
       const retryableNativeStage=["gatt connect","service discovery","characteristic discovery"].includes(failedStage);
-      const canUseChooserFallback=selection.remembered&&connectError?.name!=="AbortError"&&
+      const canUseChooserFallback=!nativeBluetoothDevice&&selection.remembered&&connectError?.name!=="AbortError"&&
         connectError?.name!=="TimeoutError"&&retryableNativeStage&&!attempt.cancelled&&
         chooserCanOpenFromCurrentGesture();
       if(!canUseChooserFallback) throw connectError;
@@ -2137,7 +2180,7 @@ $("connectBtn").onclick=async()=>{
         if(forcedChooserForAttempt) forceChooserNextConnect=true;
         setStatus("idle","Device chooser cancelled");
       }
-      else if(selection?.remembered&&!message.startsWith("Light rejected pairing")){
+      else if(!nativeBluetoothDevice&&selection?.remembered&&!message.startsWith("Light rejected pairing")){
         forceChooserNextConnect=true;
         diagnosticLog("CONNECT","FORCE_CHOOSER_ARMED",{attemptId,reason:message},"WARN");
         setStatus("error",message);
@@ -2150,6 +2193,26 @@ $("connectBtn").onclick=async()=>{
     $("connectBtn").removeAttribute("aria-busy");
   }
 };
+
+function scheduleNativeAutoConnect(reason="native app ready",delayMs=300){
+  if(!NATIVE_SKY_BLUETOOTH) return;
+  if(nativeAutoConnectTimer!==null) clearTimeout(nativeAutoConnectTimer);
+  nativeAutoConnectTimer=setTimeout(async()=>{
+    nativeAutoConnectTimer=null;
+    if(document.hidden||connectInProgress||activeConnectAttempt||isConnectedMesh()) return;
+    try{
+      const status=await NATIVE_SKY_BLUETOOTH.getStatus();
+      diagnosticLog("NATIVE","AUTO_CONNECT_CHECK",{
+        reason,remembered:!!status?.remembered,nativeConnected:!!status?.connected,
+        bluetoothState:status?.bluetoothState||"unknown"
+      });
+      if(!status?.remembered||document.hidden||connectInProgress||isConnectedMesh()) return;
+      diagnosticLog("NATIVE","AUTO_CONNECT_START",{reason});
+      $("connectBtn").click();
+    }catch(error){ diagnosticError("NATIVE","AUTO_CONNECT_CHECK_FAILED",error,{reason}); }
+  },delayMs);
+}
+scheduleNativeAutoConnect("app launch");
 
 function scheduleForegroundResume(reason="page visible"){
   if(!foregroundResumeWanted||!foregroundResumeDevice||document.hidden) return;
@@ -2210,7 +2273,7 @@ async function resumeAnimatedPresetInForeground(generation,reason){
       presetId:activePresetId,
       power:powerOn?"ON":"OFF"
     });
-    setStatus("connected","Animated preset resumed after returning to Bluefy");
+    setStatus("connected",nativeBluetoothDevice?"Animated preset resumed after returning to the app":"Animated preset resumed after returning to Bluefy");
   }catch(error){
     if(mesh){ mesh.disconnect("foreground reconnect cleanup"); mesh=null; }
     connectionReady=false;
@@ -2469,6 +2532,7 @@ function currentDiagnosticSnapshot(){
     applied:connected?Object.assign({meaning:"Bluetooth write completed; not hardware-confirmed"},mesh.appliedState):null,
     commandQueueDepth:mesh?.commandQueueDepth||0,
     animation:{
+      engine:NATIVE_SKY_BLUETOOTH?"native CoreBluetooth":"JavaScript timer",
       presetId:activeAnimatedPresetId,
       generation:presetEffectGeneration,
       lastLocalWriteCompletedAt:presetEffectLastFrameAt?new Date(presetEffectLastFrameAt).toISOString():null,
@@ -2626,6 +2690,19 @@ function releaseLamp(reason="unknown lifecycle event"){
     return;
   }
   lastLampReleaseAt=now;
+  const preserveNativeSession=!!NATIVE_SKY_BLUETOOTH&&
+    (reason==="visibility hidden"||reason==="pagehide persisted")&&
+    connectionReady&&!powerTransactionPending&&
+    !!mesh?.sessionKey&&!!mesh?.device?.gatt?.connected;
+  if(preserveNativeSession){
+    if(activeAnimatedPresetId!==null) releasePresetEffectWakeLock({immediateScreenDim:true});
+    diagnosticLog("LIFECYCLE","NATIVE_BACKGROUND_SESSION_PRESERVED",{
+      reason,presetId:activeAnimatedPresetId,animated:activeAnimatedPresetId!==null,connectionRetained:true,
+      transport:"native CoreBluetooth"
+    });
+    scheduleDiagnosticPersistence(true);
+    return;
+  }
   const releaseSnapshot=currentDiagnosticSnapshot();
   const resumableLifecycleReason=reason==="visibility hidden"||reason==="pagehide persisted";
   const canResumeAnimatedPreset=resumableLifecycleReason&&connectionReady&&!powerTransactionPending&&
@@ -2694,7 +2771,10 @@ window.addEventListener("beforeunload",()=>{
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden) releaseLamp("visibility hidden");
   diagnosticLog("LIFECYCLE","VISIBILITY_CHANGE",{visibility:document.visibilityState});
-  if(!document.hidden) scheduleForegroundResume("visibility visible");
+  if(!document.hidden){
+    scheduleForegroundResume("visibility visible");
+    scheduleNativeAutoConnect("visibility visible",250);
+  }
 });
 try{
   navigator.bluetooth?.addEventListener?.("backgroundstatechanged",event=>{

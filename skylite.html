@@ -168,7 +168,7 @@
   .diagnostics-shell{width:100%; min-height:0; flex:1; margin:0 auto;
     display:flex; flex-direction:column; gap:12px;}
   .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:10px;}
-  .diagnostics-title{min-width:0;}
+  .diagnostics-title{min-width:0; padding-left:8px;}
   .diagnostics-title h2{font-size:18px; line-height:1.1; margin:0 0 3px; display:flex; align-items:center; gap:8px; color:var(--text);}
   .diagnostics-title h2 svg{width:19px; height:19px; flex:0 0 19px; fill:none; stroke:currentColor;
     stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
@@ -406,7 +406,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-6";
+const APP_BUILD="2026-07-22-native-7";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";

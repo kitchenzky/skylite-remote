@@ -408,7 +408,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-9";
+const APP_BUILD="2026-07-22-native-10";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
@@ -2699,7 +2699,6 @@ async function shareDiagnostics(){
   }
 }
 function clearDiagnostics(){
-  if(!window.confirm("Clear the saved diagnostic history? Your projector and app settings will stay remembered.")) return;
   diagnosticEntries=[];
   persistDiagnosticEntries();
   diagnosticLog("DIAG","HISTORY_CLEARED");

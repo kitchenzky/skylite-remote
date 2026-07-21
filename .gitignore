@@ -8,3 +8,10 @@ class_list.txt
 extract.log
 quhwa_telink_classes.txt
 extract_classes.py
+
+# Native iOS build artifacts and generated web bundle
+node_modules/
+native-web/
+DerivedData/
+*.xcuserstate
+xcuserdata/

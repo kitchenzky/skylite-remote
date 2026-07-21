@@ -1,0 +1,6 @@
+{
+  "appId": "com.kitchenzky.skyremote",
+  "appName": "Kitchenzky Sky Remote",
+  "webDir": "native-web",
+  "bundledWebRuntime": false
+}

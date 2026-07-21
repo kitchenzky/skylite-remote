@@ -401,7 +401,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-21-diagnostics-14";
+const APP_BUILD="2026-07-21-diagnostics-15";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -1146,7 +1146,11 @@ function clearBluetoothDeviceId(){
   }catch(e){ diagnosticError("STORAGE","DEVICE_ID_CLEAR_FAILED",e); }
 }
 function chooserCanOpenFromCurrentGesture(){
-  return !document.hidden && (!navigator.userActivation||navigator.userActivation.isActive);
+  // Bluefy may clear navigator.userActivation while an awaited remembered-device
+  // GATT attempt is resolving, even though requestDevice can still reopen its
+  // picker from the original Connect tap. Let Bluefy decide; the picker error
+  // path safely arms a chooser for the next tap if iOS genuinely refuses it.
+  return !document.hidden;
 }
 function chooserRequiredError(){
   const error=new Error("Tap Connect again to choose BlissLights.");

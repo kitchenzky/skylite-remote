@@ -187,7 +187,6 @@
     font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
     white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; -webkit-user-select:text;}
   .diagnostics-footer{display:flex; align-items:center; justify-content:flex-end; gap:10px; min-height:44px;}
-  .diagnostics-bottomline{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px; min-height:30px;}
   .diagnostics-note{min-width:0; color:var(--muted); font-size:12px; line-height:1.35;}
   .diagnostics-clear{background:var(--panel); color:var(--err); border:1px solid var(--hair);}
   .diagnostics-toast{min-height:15px; color:var(--accent); font-size:11px; line-height:1.35; text-align:right; white-space:nowrap;}
@@ -311,6 +310,7 @@
         </button>
       </div>
       <div class="diagnostics-summary" id="diagnosticsSummary"></div>
+      <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
       <pre class="diagnostics-log" id="diagnosticsLog" tabindex="0" aria-label="Diagnostic events"></pre>
       <div class="diagnostics-footer">
         <button class="diagnostics-copy" id="diagnosticsCopy" type="button">
@@ -322,10 +322,7 @@
           CLEAR
         </button>
       </div>
-      <div class="diagnostics-bottomline">
-        <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
-        <div class="diagnostics-toast" id="diagnosticsToast" role="status" aria-live="polite"></div>
-      </div>
+      <div class="diagnostics-toast" id="diagnosticsToast" role="status" aria-live="polite"></div>
     </div>
   </section>
 
@@ -409,7 +406,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-5";
+const APP_BUILD="2026-07-22-native-6";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";

@@ -54,11 +54,11 @@
   .status{font-size:13px; color:var(--muted); text-align:center; min-height:18px; margin-bottom:20px;}
   .status.on{color:var(--accent);}
   .status.err{color:var(--err);}
-  .diagnostics-button,.diagnostics-back{width:44px; height:44px; flex:0 0 44px; padding:0; border-radius:50%;
+  .diagnostics-button,.diagnostics-back,.diagnostics-share{width:44px; height:44px; flex:0 0 44px; padding:0; border-radius:50%;
     display:inline-flex; align-items:center; justify-content:center; background:var(--panel); color:var(--accent);
     border:1px solid var(--hair);}
   .diagnostics-button{margin-top:1px; color:var(--muted);}
-  .diagnostics-button svg,.diagnostics-back svg,.diagnostics-copy svg,.diagnostics-clear svg{width:19px; height:19px; fill:none;
+  .diagnostics-button svg,.diagnostics-back svg,.diagnostics-share svg,.diagnostics-copy svg,.diagnostics-clear svg{width:19px; height:19px; fill:none;
     stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
   .card{width:100%; min-width:0; background:var(--panel); border:1px solid var(--hair); border-radius:16px; padding:18px; margin-bottom:12px;}
   .card h2{font-size:12px; font-weight:650; color:var(--muted); text-transform:uppercase;
@@ -166,7 +166,7 @@
     background:var(--bg); display:flex; flex-direction:column; overflow:hidden;}
   .diagnostics-shell{width:100%; min-height:0; flex:1; margin:0 auto;
     display:flex; flex-direction:column; gap:12px;}
-  .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:10px;}
+  .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) 44px auto; align-items:center; gap:10px;}
   .diagnostics-title{min-width:0;}
   .diagnostics-title h2{font-size:18px; line-height:1.1; margin:0 0 3px; display:flex; align-items:center; gap:8px; color:var(--text);}
   .diagnostics-title h2 svg{width:19px; height:19px; flex:0 0 19px; fill:none; stroke:currentColor;
@@ -303,6 +303,9 @@
           </h2>
           <p id="diagnosticsCount">0 saved events</p>
         </div>
+        <button class="diagnostics-share" id="diagnosticsShare" type="button" aria-label="Share diagnostic report">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </button>
         <button class="diagnostics-copy" id="diagnosticsCopy" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
           COPY
@@ -401,8 +404,9 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-3";
+const APP_BUILD="2026-07-22-native-4";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
+const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -2651,6 +2655,45 @@ async function copyDiagnostics(){
     }
   }
 }
+async function shareDiagnostics(){
+  mesh?._flushAnimationNotificationSummary?.("diagnostic report shared");
+  diagnosticLog("DIAG","SHARE_REQUESTED",currentDiagnosticSnapshot());
+  const report=buildDiagnosticReport();
+  const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+  const filename="Sky-Remote-Diagnostic-"+stamp+".txt";
+  try{
+    if(NATIVE_SKY_SHARE){
+      const result=await NATIVE_SKY_SHARE.shareReport({text:report,filename});
+      if(result?.completed){
+        $("diagnosticsToast").textContent="Shared ✓";
+        diagnosticLog("DIAG","SHARE_OK",{method:"native share sheet",activity:result?.activity||"unknown",characters:report.length});
+      }else{
+        $("diagnosticsToast").textContent="Share cancelled";
+        diagnosticLog("DIAG","SHARE_CANCELLED",{method:"native share sheet"});
+      }
+      return;
+    }
+    if(navigator.share){
+      const file=new File([report],filename,{type:"text/plain"});
+      const payload=navigator.canShare?.({files:[file]})?{title:"Sky Remote Diagnostic",files:[file]}:{title:"Sky Remote Diagnostic",text:report};
+      await navigator.share(payload);
+      $("diagnosticsToast").textContent="Shared ✓";
+      diagnosticLog("DIAG","SHARE_OK",{method:"Web Share",characters:report.length});
+      return;
+    }
+    fallbackCopyDiagnosticText(report);
+    $("diagnosticsToast").textContent="Sharing unavailable · Copied ✓";
+    diagnosticLog("DIAG","SHARE_FALLBACK_COPY",{characters:report.length},"WARN");
+  }catch(error){
+    if(error?.name==="AbortError"){
+      $("diagnosticsToast").textContent="Share cancelled";
+      diagnosticLog("DIAG","SHARE_CANCELLED",{method:"Web Share"});
+    }else{
+      $("diagnosticsToast").textContent="Couldn't share report";
+      diagnosticError("DIAG","SHARE_FAILED",error);
+    }
+  }
+}
 function clearDiagnostics(){
   if(!window.confirm("Clear the saved diagnostic history? Your projector and app settings will stay remembered.")) return;
   diagnosticEntries=[];
@@ -2662,6 +2705,7 @@ function clearDiagnostics(){
 }
 $("diagnosticsButton").addEventListener("click",openDiagnostics);
 $("diagnosticsBack").addEventListener("click",closeDiagnostics);
+$("diagnosticsShare").addEventListener("click",shareDiagnostics);
 $("diagnosticsCopy").addEventListener("click",copyDiagnostics);
 $("diagnosticsClear").addEventListener("click",clearDiagnostics);
 document.addEventListener("keydown",event=>{

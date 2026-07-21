@@ -17,6 +17,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		C0D300012E00000000000001 /* SkyBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D300022E00000000000001 /* SkyBridgeViewController.swift */; };
 		C0D300032E00000000000001 /* SkyBluetoothPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D300042E00000000000001 /* SkyBluetoothPlugin.swift */; };
+		C0D300052E00000000000001 /* SkySharePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D300062E00000000000001 /* SkySharePlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		C0D300022E00000000000001 /* SkyBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyBridgeViewController.swift; sourceTree = "<group>"; };
 		C0D300042E00000000000001 /* SkyBluetoothPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyBluetoothPlugin.swift; sourceTree = "<group>"; };
+		C0D300062E00000000000001 /* SkySharePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkySharePlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +72,7 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				C0D300022E00000000000001 /* SkyBridgeViewController.swift */,
 				C0D300042E00000000000001 /* SkyBluetoothPlugin.swift */,
+				C0D300062E00000000000001 /* SkySharePlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -164,6 +167,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				C0D300012E00000000000001 /* SkyBridgeViewController.swift in Sources */,
 				C0D300032E00000000000001 /* SkyBluetoothPlugin.swift in Sources */,
+				C0D300052E00000000000001 /* SkySharePlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

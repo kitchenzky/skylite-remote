@@ -1,111 +1,169 @@
-## iPhone: `index.html` web app (no Mac needed)
+# Kitchenzky Sky Remote
 
-`index.html` (same file as `skylite.html`) is a self-contained Web Bluetooth
-app — works standalone on iPhone via the **Bluefy** browser (Safari has no
-Web Bluetooth).
+A mobile-first Web Bluetooth remote for a BlissLights Sky Lite 2.0 projector. It connects directly to the projector without requiring the BlissLights app or a server.
 
-**Deploy to GitHub Pages:**
-1. Push this folder to a GitHub repo (`.gitignore` already excludes the
-   APK/decompile artifacts — those aren't needed to run the app).
-2. Repo Settings → Pages → Deploy from branch → `main` / root. Wait ~1 min.
-3. URL will be `https://<user>.github.io/<repo>/` — serves `index.html`
-   automatically. HTTPS is required for Web Bluetooth; Pages gives you that.
-4. On iPhone, open that URL **in Bluefy** (not Safari) → Share → Add to
-   Home Screen. Launches full-screen like a native app from then on.
+**Live app:** [kitchenzky.github.io/skylite-remote](https://kitchenzky.github.io/skylite-remote/)
 
-`manifest.json` + `icon.svg` give it a proper name/icon/splash color on the
-home screen. No build step, no server code — just static files.
+The interface is designed primarily for iPhone and has been tested with the [Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055) Web Bluetooth browser. Safari does not provide the Web Bluetooth API required by this project.
 
-# BlissLights Sky Lite 2.0 — direct Bluetooth control (no app)
+## Features
 
-The official BlissLights app was pulled from the App Store and Google Play.
-This talks to the Sky Lite 2.0 directly over its Bluetooth LE mesh, so you
-don't need the app at all. **This is confirmed working** — on/off, presets,
-and color all control a real light.
+- Direct Bluetooth Low Energy connection and Telink mesh login
+- Remembers the permitted projector after the first selection
+- Automatically falls back to the Bluetooth chooser if a remembered connection is stale
+- Power control and connection-state feedback
+- Ten presets, including three custom animated effects
+- Manual red, green, blue and laser-dot selection
+- Low, Medium and High brightness controls
+- Independent rotation control
+- Restores the selected output after connecting
+- Safe disconnection and animated-preset recovery when Bluefy moves between foreground and background
+- Full-screen, copyable diagnostic log with bounded local history
+- Responsive iPhone layout and home-screen metadata
 
-## Your light's details (fill these in once)
+## Use it on iPhone
 
-- **BLE address (macOS):** `2B828E3B-61A4-05CB-6FA1-24E9C6068052`
-  - macOS makes this up per-Mac and it can change. If a command can't find
-    the light, re-run `scan_devices.py` to get the current one.
-- **Real Bluetooth MAC:** `A4C1385A60D1`
-  - Hardware value, never changes. Always pass it with `--mac`.
-- **Mesh credentials:** `telink_mesh0` / `123` (factory defaults; the script
-  uses these automatically)
+1. Install Bluefy from the App Store.
+2. Turn on Bluetooth and place the phone near the projector.
+3. Close the BlissLights app on every phone that may still be connected to the projector.
+4. Open the [live app](https://kitchenzky.github.io/skylite-remote/) inside Bluefy.
+5. Tap the round Bluetooth button.
+6. If the device chooser appears, select **BlissLights**.
+7. Wait for **Connected ✓** before using the controls.
 
-## Everyday usage
+The app remembers the authorized device. On later visits it first tries that projector directly; if Bluefy has a stale Bluetooth reference, the chooser opens so the connection can continue.
+
+### Add it to the Home Screen
+
+Open the live app in Bluefy, use the Share menu, and choose **Add to Home Screen**. The included `manifest.json` and `icon.svg` provide the app name, icon, portrait orientation and dark launch colors.
+
+## Controls
+
+### Presets
+
+| Preset | Effect |
+| --- | --- |
+| Nebula + Stars | Nebula and laser stars |
+| Nebula | Nebula without laser stars |
+| Stars | Laser stars only |
+| Ocean | Built-in ocean scene |
+| Space | Built-in space scene |
+| Sunrise | Built-in sunrise scene |
+| Perfect Blue | Blue nebula and blue laser dots fade against one another while both remain visible |
+| Cosmic Pulse | Magenta nebula with smoothly pulsing laser stars |
+| RGB Pulse | Slowly and smoothly transitions through red, blue and green with rotation enabled |
+| Fading | Built-in fading scene |
+
+Custom animations stop safely when changing presets, tabs, power state or Bluetooth connection.
+
+### Light Control
+
+Opening **LIGHT CONTROL** switches from the current preset to the remembered custom configuration. The initial configuration is:
+
+- Red, green and blue enabled
+- Laser dots enabled
+- High brightness
+- Rotation ON
+
+Changes are sent as one complete projector state so brightness, colors, laser dots and rotation remain independent.
+
+## Diagnostic Log
+
+Tap the circled bug icon in the upper-right corner to open diagnostics. The report records connection stages, pairing, power and output commands, lifecycle changes, animation health and projector feedback.
+
+- Tap **COPY** and paste the report into an issue or support conversation.
+- Tap **CLEAR** before reproducing a new, unrelated problem.
+- The history automatically rolls over at 240 events or about 80,000 characters.
+- Passwords, session keys, pairing challenges and hardware identifiers are excluded or redacted.
+
+For a clean bug report: **CLEAR → reproduce the problem once → COPY**.
+
+## Troubleshooting
+
+### The first connection attempt fails
+
+Keep the page visible and tap Connect once. The app tries the remembered projector first and opens the chooser during the same attempt if that reference is stale. If Bluefy or iOS refuses the chooser, tap Connect again and select **BlissLights**.
+
+### `Light rejected pairing (0xe)`
+
+The projector is probably connected to, or was provisioned by, the BlissLights app. Fully close that app on every nearby phone and retry.
+
+If the error persists, a factory reset may be required. Hold the projector's top button until it flashes six times. This removes its existing app pairing and restores the factory mesh credentials, so use it only when necessary.
+
+### The projector is missing from the chooser
+
+- Move the phone closer to the projector.
+- Make sure another phone or app is not connected.
+- Close and reopen Bluefy.
+- Unplug the projector briefly, reconnect power, and try again.
+
+### GitHub Pages shows an older build
+
+Wait about a minute after a push, then reload the page in Bluefy. GitHub Pages provides the HTTPS context required by Web Bluetooth.
+
+## Compatibility and device configuration
+
+This repository is confirmed with one BlissLights Sky Lite 2.0 using the factory Telink mesh credentials. Web Bluetooth does not expose the projector's real hardware MAC address, but the Telink packet encryption requires it. The current app therefore contains the tested projector's MAC in `REAL_MAC`.
+
+To use the project with a different Sky Lite unit, determine that unit's real Bluetooth MAC and update `REAL_MAC` in both `index.html` and `skylite.html`. A differently provisioned projector may also need to be returned to its factory mesh credentials.
+
+## Deployment
+
+The web app is static and needs no build step:
+
+1. Fork or clone the repository.
+2. In GitHub, open **Settings → Pages**.
+3. Choose **Deploy from a branch**.
+4. Select `main` and `/ (root)`.
+5. Open `https://<username>.github.io/<repository>/` after deployment completes.
+
+`index.html` is the GitHub Pages entry point. `skylite.html` is an identical standalone copy.
+
+## Optional macOS command-line tools
+
+The repository also includes the original Python controller used to inspect and validate the protocol.
+
+Install its dependencies:
 
 ```bash
-python3 control.py <address> on   --mac A4C1385A60D1
-python3 control.py <address> off  --mac A4C1385A60D1
-python3 control.py <address> scenes --mac A4C1385A60D1     # list presets
-python3 control.py <address> scene 4 --mac A4C1385A60D1    # 4 = Nebula
-python3 control.py <address> color 255 0 255 --mac A4C1385A60D1   # magenta
+python3 -m pip install -r requirements.txt
 ```
 
-`color` takes optional extra values after R G B:
-`color <r> <g> <b> [brightness 0-255] [laser 0-255] [motor 0-255]`
-(laser = the green star dots, motor = rotation speed).
-
-### Built-in presets
-
-| ID | Effect |
-|----|--------|
-| 1  | Stars against nebula |
-| 2  | Fading |
-| 3  | Stars |
-| 4  | Nebula |
-| 5  | Ocean |
-| 6  | Space |
-| 8  | Sunrise |
-| 9  | RGB auto |
-| 0  | ON/OFF (manual color mode) |
-
-## One-time setup
+Find the macOS Bluetooth identifier:
 
 ```bash
-pip3 install bleak pycryptodome
+python3 scan_devices.py
 ```
 
-Make sure Bluetooth is on and you're within ~10 ft of the light.
+Example commands:
 
-## Important: don't re-add this light in the BlissLights app
+```bash
+python3 control.py <macOS-address> on --mac <real-hardware-mac>
+python3 control.py <macOS-address> off --mac <real-hardware-mac>
+python3 control.py <macOS-address> scenes --mac <real-hardware-mac>
+python3 control.py <macOS-address> scene 4 --mac <real-hardware-mac>
+python3 control.py <macOS-address> color 255 0 255 --mac <real-hardware-mac>
+```
 
-The light was factory-reset (hold the top button until it flashes 6 times)
-so it would accept the factory mesh credentials this script uses. If you ever
-re-add it inside the iPhone app, the app assigns a new random mesh name and
-this script will stop working (pairing will return `0x0E`). To recover, just
-factory-reset the light again (top button, 6 flashes) and it'll work here
-again.
+The optional color arguments are:
 
-## How it works (for future reference)
+```text
+color <red> <green> <blue> [brightness 0-255] [laser 0-255] [motor 0-255]
+```
 
-The Sky Lite 2.0 uses a Telink TLSR8250 BLE mesh chip. Getting a command to
-actually take effect required getting *all* of these right at once — each one
-wrong causes a silent no-op:
+## Repository files
 
-1. **Mesh credentials** `telink_mesh0` / `123` (factory defaults, restored by
-   the 6-flash reset). The app normally reprovisions each light with a random
-   per-phone mesh name, which is why pairing failed before the reset.
-2. **Real MAC** `A4:C1:38:5A:60:D1` — used as key material in the per-packet
-   encryption nonce (macOS hides this, so it must be passed explicitly).
-3. **Write-without-response** on the command characteristic (`...1912`) — the
-   firmware ignores write-with-response.
-4. **Projector opcode** — on/off is `{0x41, state, 0x01}`; effect switch is
-   `{0x41, id, 0x00}`; color is `{0x47, R,G,B, laser, motor, bright, breathe}`.
-   (The LED-strip product uses different opcodes — `0x16`/`0x11`/`0x12`.)
-5. **Correct mesh address** — the light reports its own address (`0xD1`) in its
-   online-status notifications; the script auto-discovers and targets it.
-6. **Random 24-bit sequence number** — the firmware drops commands whose
-   sequence number looks like a replay, so each session starts at a random
-   value like the real app does.
+- `index.html` — deployed mobile web app
+- `skylite.html` — identical standalone copy of the web app
+- `manifest.json` — home-screen/PWA metadata
+- `icon.svg` — local app icon
+- `control.py` — macOS command-line controller
+- `telink_mesh.py` — Telink mesh protocol and cryptography
+- `scan_devices.py` — nearby BLE device scanner
+- `requirements.txt` — Python dependencies
 
-All of the crypto (`telink_mesh.py`) was verified byte-for-byte against the
-decompiled BlissLights Android app.
+## Protocol notes
 
-## Files
+The projector uses a Telink TLSR8250 BLE mesh. Commands require factory mesh credentials, the real hardware MAC as encryption input, write-without-response on the command characteristic, projector-specific opcodes, the discovered mesh destination and a fresh packet sequence number.
 
-- `control.py` — the command-line tool you run.
-- `telink_mesh.py` — the protocol/crypto implementation.
-- `scan_devices.py` — lists nearby BLE devices (to find the light's address).
-- `requirements.txt` — Python dependencies.
+The JavaScript and Python implementations perform the Telink login and packet encryption locally. No Bluetooth command or diagnostic report is sent to a remote application server.

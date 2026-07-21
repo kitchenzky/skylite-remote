@@ -58,6 +58,7 @@
     display:inline-flex; align-items:center; justify-content:center; background:var(--panel); color:var(--accent);
     border:1px solid var(--hair);}
   .diagnostics-button{margin-top:1px; color:var(--muted);}
+  .diagnostics-share{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
   .diagnostics-button svg,.diagnostics-back svg,.diagnostics-share svg,.diagnostics-copy svg,.diagnostics-clear svg{width:19px; height:19px; fill:none;
     stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
   .card{width:100%; min-width:0; background:var(--panel); border:1px solid var(--hair); border-radius:16px; padding:18px; margin-bottom:12px;}
@@ -166,7 +167,7 @@
     background:var(--bg); display:flex; flex-direction:column; overflow:hidden;}
   .diagnostics-shell{width:100%; min-height:0; flex:1; margin:0 auto;
     display:flex; flex-direction:column; gap:12px;}
-  .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) 44px auto; align-items:center; gap:10px;}
+  .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:10px;}
   .diagnostics-title{min-width:0;}
   .diagnostics-title h2{font-size:18px; line-height:1.1; margin:0 0 3px; display:flex; align-items:center; gap:8px; color:var(--text);}
   .diagnostics-title h2 svg{width:19px; height:19px; flex:0 0 19px; fill:none; stroke:currentColor;
@@ -175,7 +176,7 @@
   .diagnostics-copy,.diagnostics-clear{width:96px; height:44px; min-height:44px; max-height:44px;
     flex:0 0 96px; padding:0 12px; border-radius:999px; display:inline-flex; align-items:center;
     justify-content:center; gap:7px; font-size:12px; font-weight:700;}
-  .diagnostics-copy{background:var(--accent); color:var(--accent-ink); border:1px solid transparent;}
+  .diagnostics-copy{background:var(--panel); color:var(--text); border:1px solid var(--hair);}
   .diagnostics-summary{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
   .diagnostics-summary>div{min-width:0; padding:10px 12px; border-radius:12px; border:1px solid var(--hair); background:var(--panel);}
   .diagnostics-summary span{display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:700;
@@ -185,10 +186,11 @@
     border:1px solid var(--hair); border-radius:14px; background:#03050b; color:#c9cde0;
     font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
     white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; -webkit-user-select:text;}
-  .diagnostics-footer{display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:44px;}
+  .diagnostics-footer{display:flex; align-items:center; justify-content:flex-end; gap:10px; min-height:44px;}
+  .diagnostics-bottomline{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px; min-height:30px;}
   .diagnostics-note{min-width:0; color:var(--muted); font-size:12px; line-height:1.35;}
   .diagnostics-clear{background:var(--panel); color:var(--err); border:1px solid var(--hair);}
-  .diagnostics-toast{min-height:15px; color:var(--accent); font-size:11px; text-align:right;}
+  .diagnostics-toast{min-height:15px; color:var(--accent); font-size:11px; line-height:1.35; text-align:right; white-space:nowrap;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -210,6 +212,7 @@
       padding-left:max(12px,env(safe-area-inset-left));}
     .diagnostics-header{gap:8px;}
     .diagnostics-copy{padding:0 12px;}
+    .diagnostics-note{font-size:11px;}
   }
   @media (max-width:340px){
     .brightness-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -306,21 +309,23 @@
         <button class="diagnostics-share" id="diagnosticsShare" type="button" aria-label="Share diagnostic report">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
         </button>
-        <button class="diagnostics-copy" id="diagnosticsCopy" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-          COPY
-        </button>
       </div>
       <div class="diagnostics-summary" id="diagnosticsSummary"></div>
       <pre class="diagnostics-log" id="diagnosticsLog" tabindex="0" aria-label="Diagnostic events"></pre>
       <div class="diagnostics-footer">
-        <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
+        <button class="diagnostics-copy" id="diagnosticsCopy" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          COPY
+        </button>
         <button class="diagnostics-clear" id="diagnosticsClear" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           CLEAR
         </button>
       </div>
-      <div class="diagnostics-toast" id="diagnosticsToast" role="status" aria-live="polite"></div>
+      <div class="diagnostics-bottomline">
+        <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
+        <div class="diagnostics-toast" id="diagnosticsToast" role="status" aria-live="polite"></div>
+      </div>
     </div>
   </section>
 
@@ -404,7 +409,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-4";
+const APP_BUILD="2026-07-22-native-5";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";

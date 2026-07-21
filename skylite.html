@@ -401,7 +401,8 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-21-diagnostics-15";
+const APP_BUILD="2026-07-22-native-1";
+const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -575,6 +576,8 @@ diagnosticLog("APP","SESSION_START",{
   build:APP_BUILD,
   visibility:document.visibilityState,
   bluetooth:!!navigator.bluetooth,
+  nativeBluetooth:!!NATIVE_SKY_BLUETOOTH,
+  bluetoothTransport:NATIVE_SKY_BLUETOOTH?"native CoreBluetooth":(navigator.bluetooth?"Web Bluetooth":"unavailable"),
   getDevices:typeof navigator.bluetooth?.getDevices==="function",
   screenDimApi:typeof navigator.bluetooth?.setScreenDimEnabled==="function",
   logPersistence:diagnosticPersistenceState
@@ -636,6 +639,129 @@ const ANIMATION_RETRY_DELAYS=[150,350];
 const ANIMATION_STALL_MS=5000;
 const SCREEN_DIM_TIMEOUT_MS=750;
 const bluetoothDeviceOwners=new Map();
+
+/* ======================== Native Bluetooth adapter ========================
+   Capacitor talks to CoreBluetooth, while the proven Telink protocol below
+   expects Web Bluetooth objects. These small adapters preserve that boundary
+   so the protocol, encryption, status sync and preset logic stay shared. */
+function nativeHexToDataView(hex){
+  const clean=String(hex||"").replace(/\s+/g,"");
+  if(clean.length%2) throw new Error("Native Bluetooth returned invalid hexadecimal data.");
+  const bytes=new Uint8Array(clean.length/2);
+  for(let i=0;i<bytes.length;i++) bytes[i]=parseInt(clean.slice(i*2,i*2+2),16);
+  return new DataView(bytes.buffer);
+}
+function nativeBufferToHex(value){
+  let bytes;
+  if(value instanceof ArrayBuffer) bytes=new Uint8Array(value);
+  else if(ArrayBuffer.isView(value)) bytes=new Uint8Array(value.buffer,value.byteOffset,value.byteLength);
+  else bytes=Uint8Array.from(value||[]);
+  return Array.from(bytes,byte=>byte.toString(16).padStart(2,"0")).join("");
+}
+function nativeCharacteristicName(uuid){
+  const normalized=String(uuid).toLowerCase();
+  if(normalized===CH_PAIR) return "pair";
+  if(normalized===CH_COMMAND) return "command";
+  if(normalized===CH_NOTIFY) return "notify";
+  throw new Error("Unknown Telink Bluetooth characteristic: "+uuid);
+}
+class NativeBluetoothCharacteristic{
+  constructor(device,uuid){
+    this.device=device;
+    this.uuid=String(uuid).toLowerCase();
+    this.nativeName=nativeCharacteristicName(this.uuid);
+    this.value=null;
+    this.listeners=new Set();
+  }
+  async readValue(){
+    const result=await NATIVE_SKY_BLUETOOTH.read({characteristic:this.nativeName});
+    this.value=nativeHexToDataView(result?.hex);
+    return this.value;
+  }
+  async writeValue(value){
+    await NATIVE_SKY_BLUETOOTH.write({characteristic:this.nativeName,hex:nativeBufferToHex(value),withoutResponse:false});
+  }
+  async writeValueWithoutResponse(value){
+    await NATIVE_SKY_BLUETOOTH.write({characteristic:this.nativeName,hex:nativeBufferToHex(value),withoutResponse:true});
+  }
+  async startNotifications(){
+    await this.device._ensureNativeListeners();
+    await NATIVE_SKY_BLUETOOTH.startNotifications();
+    return this;
+  }
+  addEventListener(type,listener){ if(type==="characteristicvaluechanged") this.listeners.add(listener); }
+  removeEventListener(type,listener){ if(type==="characteristicvaluechanged") this.listeners.delete(listener); }
+  _dispatchValue(hex){
+    this.value=nativeHexToDataView(hex);
+    const event={type:"characteristicvaluechanged",target:this,currentTarget:this};
+    for(const listener of [...this.listeners]){
+      try{ typeof listener==="function"?listener(event):listener?.handleEvent?.(event); }
+      catch(error){ diagnosticError("NATIVE","NOTIFICATION_HANDLER_FAILED",error); }
+    }
+  }
+}
+class NativeBluetoothService{
+  constructor(device,uuid){ this.device=device; this.uuid=uuid; }
+  async getCharacteristic(uuid){ return this.device._characteristic(uuid); }
+}
+class NativeBluetoothGATTServer{
+  constructor(device){ this.device=device; this.connected=false; }
+  async connect(){
+    await this.device._ensureNativeListeners();
+    const result=await NATIVE_SKY_BLUETOOTH.connect();
+    this.connected=true;
+    if(result?.name) this.device.name=result.name;
+    diagnosticLog("NATIVE","CORE_BLUETOOTH_CONNECTED",{source:result?.source||"unknown",peripheralRememberedByIOS:!!result?.identifier});
+    return this;
+  }
+  disconnect(){
+    this.connected=false;
+    NATIVE_SKY_BLUETOOTH.disconnect().catch(error=>diagnosticError("NATIVE","DISCONNECT_FAILED",error));
+  }
+  async getPrimaryService(uuid){
+    if(String(uuid).toLowerCase()!==SERVICE) throw new Error("The requested Bluetooth service is unavailable.");
+    return new NativeBluetoothService(this.device,SERVICE);
+  }
+}
+class NativeBluetoothDevice{
+  constructor(){
+    this.id="native-projector";
+    this.name="BlissLights";
+    this.gatt=new NativeBluetoothGATTServer(this);
+    this.disconnectListeners=new Set();
+    this.characteristics=new Map();
+    this.nativeListenersPromise=null;
+  }
+  addEventListener(type,listener){ if(type==="gattserverdisconnected") this.disconnectListeners.add(listener); }
+  removeEventListener(type,listener){ if(type==="gattserverdisconnected") this.disconnectListeners.delete(listener); }
+  _characteristic(uuid){
+    const key=String(uuid).toLowerCase();
+    if(!this.characteristics.has(key)) this.characteristics.set(key,new NativeBluetoothCharacteristic(this,key));
+    return this.characteristics.get(key);
+  }
+  _ensureNativeListeners(){
+    if(this.nativeListenersPromise) return this.nativeListenersPromise;
+    this.nativeListenersPromise=Promise.all([
+      NATIVE_SKY_BLUETOOTH.addListener("notification",event=>this._characteristic(CH_NOTIFY)._dispatchValue(event?.hex)),
+      NATIVE_SKY_BLUETOOTH.addListener("disconnected",event=>{
+        this.gatt.connected=false;
+        diagnosticLog("NATIVE","CORE_BLUETOOTH_DISCONNECTED",{intentional:!!event?.intentional,message:event?.message||"Disconnected"},event?.intentional?"INFO":"WARN");
+        const browserEvent={type:"gattserverdisconnected",target:this,currentTarget:this};
+        for(const listener of [...this.disconnectListeners]){
+          try{ typeof listener==="function"?listener(browserEvent):listener?.handleEvent?.(browserEvent); }
+          catch(error){ diagnosticError("NATIVE","DISCONNECT_HANDLER_FAILED",error); }
+        }
+      }),
+      NATIVE_SKY_BLUETOOTH.addListener("stateChanged",event=>diagnosticLog("NATIVE","BLUETOOTH_STATE_CHANGED",event)),
+      NATIVE_SKY_BLUETOOTH.addListener("nativeLog",event=>diagnosticLog("NATIVE",event?.event||"NATIVE_EVENT",event))
+    ]).then(()=>undefined).catch(error=>{
+      this.nativeListenersPromise=null;
+      throw error;
+    });
+    return this.nativeListenersPromise;
+  }
+}
+const nativeBluetoothDevice=NATIVE_SKY_BLUETOOTH?new NativeBluetoothDevice():null;
 function bluetoothDeviceOwnerKey(device){
   return device?.id ? "device:"+device.id : device;
 }
@@ -1175,6 +1301,10 @@ async function requestBluetoothDeviceFromChooser(forced){
   }
 }
 async function selectBluetoothDevice(forceChooser=false){
+  if(nativeBluetoothDevice){
+    diagnosticLog("SELECT","NATIVE_DEVICE_SELECTED",{forceChooserIgnored:forceChooser,device:diagnosticDeviceRef(nativeBluetoothDevice)});
+    return {device:nativeBluetoothDevice,remembered:true,source:"native CoreBluetooth"};
+  }
   const savedId=loadBluetoothDeviceId();
   diagnosticLog("SELECT","SELECT_START",{forceChooser,savedIdPresent:!!savedId,getDevicesSupported:typeof navigator.bluetooth?.getDevices==="function"});
   if(forceChooser||typeof navigator.bluetooth?.getDevices!=="function"||!savedId){
@@ -1904,7 +2034,7 @@ function assertConnectAttemptActive(attempt,stage){
 }
 $("connectBtn").onclick=async()=>{
   diagnosticLog("CONNECT","CONNECT_CLICK",{inProgress:connectInProgress,alreadyConnected:!!(mesh?.sessionKey&&mesh.device?.gatt?.connected),forceChooserNextConnect});
-  if(!navigator.bluetooth){
+  if(!navigator.bluetooth&&!nativeBluetoothDevice){
     diagnosticLog("CONNECT","CONNECT_BLOCKED",{reason:"Web Bluetooth unavailable"},"ERROR");
     setStatus("error","This browser has no Bluetooth. Open this page in Bluefy.");
     return;
@@ -2364,7 +2494,8 @@ function currentDiagnosticSnapshot(){
     foregroundResume:{wanted:foregroundResumeWanted,deviceRetained:!!foregroundResumeDevice,generation:foregroundResumeGeneration},
     visibility:document.visibilityState,
     forceChooserNextConnect,
-    rememberedDeviceApi:typeof navigator.bluetooth?.getDevices==="function",
+    rememberedDeviceApi:!!nativeBluetoothDevice||typeof navigator.bluetooth?.getDevices==="function",
+    bluetoothTransport:nativeBluetoothDevice?"native CoreBluetooth":(navigator.bluetooth?"Web Bluetooth":"unavailable"),
     logPersistence:diagnosticPersistenceState,
     logPersistenceError:diagnosticPersistenceError||null
   };

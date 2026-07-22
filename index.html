@@ -401,7 +401,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-21-diagnostics-15";
+const APP_BUILD="2026-07-22-web-updated-presets";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -600,25 +600,33 @@ const VENDOR=0x0211;
 const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47;
 const DEFAULT_PRESET_ID=1;
 const COSMIC_PULSE_ID=100;
-const PRISM_PULSE_ID=101;
+const RGB_PULSE_ID=101;
 const PERFECT_BLUE_ID=102;
+const HEARTBEAT_ID=2;
 const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
                [6,"Space"],[8,"Sunrise"],[PERFECT_BLUE_ID,"Perfect Blue"],
-               [COSMIC_PULSE_ID,"Cosmic Pulse"],[PRISM_PULSE_ID,"RGB Pulse"],[2,"Fading"]];
-const SMOOTH_PULSE_STEPS=96;
-const SMOOTH_PULSE_DELAY=85;
-// Perfect Blue previously sent about nine frames per second, while this
-// projector emits 0x47 feedback at only about four per second. Keep
-// the same roughly 12-second fade, but stop flooding its firmware queue.
-const PERFECT_BLUE_STEPS=48;
-const PERFECT_BLUE_DELAY=220;
+               [COSMIC_PULSE_ID,"Cosmic Pulse"],[RGB_PULSE_ID,"RGB Pulse"],[HEARTBEAT_ID,"Heartbeat"]];
+const SMOOTH_PULSE_STEPS=64;
+const SMOOTH_PULSE_DELAY=250;
+const PERFECT_BLUE_STEPS=160;
+const PERFECT_BLUE_DELAY=250;
 const COSMIC_LASER_MIN=32;
-const PERFECT_BLUE_COLOR_MIN=64;
+const PERFECT_BLUE_COLOR_MIN=32;
 const PERFECT_BLUE_LASER_MIN=16;
 const PRISM_PULSE_COLORS=[[255,0,0],[0,0,255],[0,255,0]];
-const PRISM_TRANSITION_STEPS=144;
-const PRISM_PULSE_DELAY=100;
-const PRISM_PULSE_FLOOR=.55;
+const PRISM_TRANSITION_STEPS=300;
+const PRISM_HOLD_STEPS=60;
+const PRISM_PULSE_DELAY=1000/30;
+const HEARTBEAT_DELAY=1000/30;
+const HEARTBEAT_FIRST_RISE_STEPS=8;
+const HEARTBEAT_FIRST_FALL_STEPS=8;
+const HEARTBEAT_GAP_STEPS=4;
+const HEARTBEAT_SECOND_RISE_STEPS=8;
+const HEARTBEAT_SECOND_FALL_STEPS=8;
+const HEARTBEAT_REST_STEPS=84;
+const HEARTBEAT_STEPS=HEARTBEAT_FIRST_RISE_STEPS+HEARTBEAT_FIRST_FALL_STEPS+
+  HEARTBEAT_GAP_STEPS+HEARTBEAT_SECOND_RISE_STEPS+HEARTBEAT_SECOND_FALL_STEPS+
+  HEARTBEAT_REST_STEPS;
 const BT_TIMEOUT={
   GATT_CONNECT:10000,
   DISCOVERY:5000,
@@ -1394,7 +1402,7 @@ function stopPresetEffect(reason="state change",{deferWakeRelease=false,preserve
   if(!deferWakeRelease) releasePresetEffectWakeLock({restoreScreenDim:!preserveScreenDim});
 }
 function isAnimatedPreset(id){
-  return id===COSMIC_PULSE_ID || id===PRISM_PULSE_ID || id===PERFECT_BLUE_ID;
+  return id===COSMIC_PULSE_ID || id===RGB_PULSE_ID || id===PERFECT_BLUE_ID || id===HEARTBEAT_ID;
 }
 function presetEffectIntentIsCurrent(generation,id){
   return generation===presetEffectGeneration && activeMode===MODE_PRESET && activePresetId===id;
@@ -1408,22 +1416,26 @@ function presetEffectIsCurrent(generation,runMesh,id){
     runMesh?.sessionKey && runMesh.device?.gatt?.connected;
 }
 function prismPulseFrame(index){
-  const phase=Math.floor(index/PRISM_TRANSITION_STEPS)%PRISM_PULSE_COLORS.length;
-  const step=index%PRISM_TRANSITION_STEPS;
+  const segmentSteps=PRISM_HOLD_STEPS+PRISM_TRANSITION_STEPS;
+  const phase=Math.floor(index/segmentSteps)%PRISM_PULSE_COLORS.length;
+  const step=index%segmentSteps;
   const from=PRISM_PULSE_COLORS[phase];
   const to=PRISM_PULSE_COLORS[(phase+1)%PRISM_PULSE_COLORS.length];
-  const t=step/PRISM_TRANSITION_STEPS;
-  const eased=(1-Math.cos(Math.PI*t))/2;
-  const fadeOut=Math.cos(eased*Math.PI/2);
-  const fadeIn=Math.sin(eased*Math.PI/2);
-  const pulseWave=Math.cos(Math.PI*t);
-  const intensity=PRISM_PULSE_FLOOR+(1-PRISM_PULSE_FLOOR)*pulseWave*pulseWave;
-  return [
-    Math.round((from[0]*fadeOut+to[0]*fadeIn)*intensity),
-    Math.round((from[1]*fadeOut+to[1]*fadeIn)*intensity),
-    Math.round((from[2]*fadeOut+to[2]*fadeIn)*intensity),
-    0
-  ];
+  if(step<PRISM_HOLD_STEPS) return [...from,0];
+  const transitionStep=step-PRISM_HOLD_STEPS;
+  const halfSteps=PRISM_TRANSITION_STEPS/2;
+  let fromLevel=1;
+  let toLevel=1;
+  if(transitionStep<halfSteps){
+    const t=transitionStep/(halfSteps-1);
+    toLevel=(1-Math.cos(Math.PI*t))/2;
+  }else{
+    const t=(transitionStep-halfSteps)/(halfSteps-1);
+    fromLevel=(1+Math.cos(Math.PI*t))/2;
+  }
+  return from.map((value,channel)=>Math.round(
+    value*fromLevel+to[channel]*toLevel
+  )).concat(0);
 }
 function smoothPulseWave(index,steps=SMOOTH_PULSE_STEPS){
   const phase=(index%steps)/steps;
@@ -1439,21 +1451,44 @@ function perfectBlueFrame(index){
   const laser=Math.round(PERFECT_BLUE_LASER_MIN+(255-PERFECT_BLUE_LASER_MIN)*(1-wave));
   return [0,0,blue,laser];
 }
+function heartbeatEase(step,steps,rising){
+  const t=steps<=1?1:step/(steps-1);
+  return rising?(1-Math.cos(Math.PI*t))/2:(1+Math.cos(Math.PI*t))/2;
+}
+function heartbeatFrame(index){
+  let step=index%HEARTBEAT_STEPS;
+  let level=0;
+  if(step<HEARTBEAT_FIRST_RISE_STEPS){
+    level=heartbeatEase(step,HEARTBEAT_FIRST_RISE_STEPS,true);
+  }else if((step-=HEARTBEAT_FIRST_RISE_STEPS)<HEARTBEAT_FIRST_FALL_STEPS){
+    level=heartbeatEase(step,HEARTBEAT_FIRST_FALL_STEPS,false);
+  }else if((step-=HEARTBEAT_FIRST_FALL_STEPS)<HEARTBEAT_GAP_STEPS){
+    level=0;
+  }else if((step-=HEARTBEAT_GAP_STEPS)<HEARTBEAT_SECOND_RISE_STEPS){
+    level=.82*heartbeatEase(step,HEARTBEAT_SECOND_RISE_STEPS,true);
+  }else if((step-=HEARTBEAT_SECOND_RISE_STEPS)<HEARTBEAT_SECOND_FALL_STEPS){
+    level=.82*heartbeatEase(step,HEARTBEAT_SECOND_FALL_STEPS,false);
+  }
+  return [Math.round(255*level),0,0,255];
+}
 function animatedPresetFrame(id,index){
   if(id===COSMIC_PULSE_ID){
     return [255,0,255,cosmicPulseLaser(index)];
   }
   if(id===PERFECT_BLUE_ID) return perfectBlueFrame(index);
+  if(id===HEARTBEAT_ID) return heartbeatFrame(index);
   return prismPulseFrame(index);
 }
 function animatedPresetDelay(id){
-  return id===PRISM_PULSE_ID ? PRISM_PULSE_DELAY
+  return id===HEARTBEAT_ID ? HEARTBEAT_DELAY
+    : id===RGB_PULSE_ID ? PRISM_PULSE_DELAY
     : id===PERFECT_BLUE_ID ? PERFECT_BLUE_DELAY
     : SMOOTH_PULSE_DELAY;
 }
 function animatedPresetFrameCount(id){
-  return id===PRISM_PULSE_ID
-    ? PRISM_TRANSITION_STEPS*PRISM_PULSE_COLORS.length
+  return id===HEARTBEAT_ID ? HEARTBEAT_STEPS
+    : id===RGB_PULSE_ID
+    ? (PRISM_HOLD_STEPS+PRISM_TRANSITION_STEPS)*PRISM_PULSE_COLORS.length
     : id===PERFECT_BLUE_ID ? PERFECT_BLUE_STEPS
     : SMOOTH_PULSE_STEPS;
 }

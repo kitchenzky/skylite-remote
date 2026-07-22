@@ -2,7 +2,7 @@
   "name": "kitchenzky-sky-remote",
   "version": "0.1.0",
   "private": true,
-  "description": "Native iOS shell for Kitchenzky Sky Remote",
+  "description": "Native iOS shell for KitchenSky Remote",
   "scripts": {
     "prepare:native": "node scripts/prepare-native.mjs",
     "sync:ios": "npm run prepare:native && cap sync ios",

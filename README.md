@@ -1,41 +1,109 @@
 # Kitchenzky Sky Remote
 
-A mobile-first Web Bluetooth remote for a BlissLights Sky Lite 2.0 projector. It connects directly to the projector without requiring the BlissLights app or a server.
+A personal mobile remote for a BlissLights Sky Lite 2.0 projector. The project now has two editions: a native iPhone app using CoreBluetooth and a mobile Web Bluetooth version hosted on GitHub Pages.
 
-**Live app:** [kitchenzky.github.io/skylite-remote](https://kitchenzky.github.io/skylite-remote/)
+No BlissLights app or remote application server is required. Bluetooth login, Telink packet encryption and projector commands are handled locally on the phone.
 
-The interface is designed primarily for iPhone and has been tested with the [Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055) Web Bluetooth browser. Safari does not provide the Web Bluetooth API required by this project.
+## Project editions
+
+| Edition | Branch | Bluetooth transport | Best use |
+| --- | --- | --- | --- |
+| Native iPhone app | [`feature/native-ios`](https://github.com/kitchenzky/skylite-remote/tree/feature/native-ios) | Apple CoreBluetooth | Primary personal app; automatic reconnection and native background animation |
+| Web app | [`main`](https://github.com/kitchenzky/skylite-remote/tree/main) | Web Bluetooth in Bluefy | Install-free fallback and GitHub Pages deployment |
+
+**Live web app:** [kitchenzky.github.io/skylite-remote](https://kitchenzky.github.io/skylite-remote/)
+
+The branches are intentionally separate. GitHub Pages deploys only `main`; native iOS development stays on `feature/native-ios` so Xcode and Capacitor files cannot disturb the stable web build.
 
 ## Features
 
 - Direct Bluetooth Low Energy connection and Telink mesh login
-- Remembers the permitted projector after the first selection
-- Automatically falls back to the Bluetooth chooser if a remembered connection is stale
+- Remembers the selected projector
 - Power control and connection-state feedback
 - Ten presets, including three custom animated effects
 - Manual red, green, blue and laser-dot selection
 - Low, Medium and High brightness controls
 - Independent rotation control
 - Restores the selected output after connecting
-- Safe disconnection and animated-preset recovery when Bluefy moves between foreground and background
-- Full-screen, copyable diagnostic log with bounded local history
-- Responsive iPhone layout and home-screen metadata
+- Full-screen diagnostic history with COPY, CLEAR and native sharing
+- Responsive iPhone interface with local icons and assets
+- No analytics, cloud account or application server
 
-## Use it on iPhone
+## Native iPhone app
+
+The native edition is the recommended version for personal use. It keeps the existing interface while replacing Bluefy's Web Bluetooth layer with a Swift CoreBluetooth transport.
+
+### Native advantages
+
+- Reconnects automatically to the previously selected projector
+- Does not show a browser Bluetooth chooser on every connection
+- Keeps the Bluetooth session while the app moves to the background
+- Runs Perfect Blue, Cosmic Pulse and RGB Pulse from a native Swift animation engine
+- Shares a complete diagnostic `.txt` report through the iOS Share Sheet, including AirDrop
+- Uses an app icon baked into the installed application
+
+iOS may eventually suspend or terminate any background app. Animated presets continue while the app is backgrounded and the Bluetooth session is retained, but force-quitting the app stops app-driven animation.
+
+### Requirements
+
+- A Mac with Xcode and iOS platform support installed
+- An iPhone connected to the Mac
+- An Apple ID added to Xcode
+- Developer Mode enabled on the iPhone
+- The projector nearby and not connected to the BlissLights app
+
+A free Apple Personal Team is sufficient for private installation. Personal Team builds normally need to be rebuilt and reinstalled periodically when their development signing expires.
+
+### Build and install
+
+Clone the native branch:
+
+```bash
+git clone --branch feature/native-ios https://github.com/kitchenzky/skylite-remote.git skylite-remote-ios
+cd skylite-remote-ios
+npm install
+npm run sync:ios
+open ios/App/App.xcodeproj
+```
+
+In Xcode:
+
+1. Select the **App** target.
+2. Open **Signing & Capabilities**.
+3. Enable **Automatically manage signing**.
+4. Select your Personal Team.
+5. Connect and select your iPhone as the run destination.
+6. Press **Run**.
+
+To install a later version, pull the native branch, run `npm run sync:ios`, then build and run from Xcode again.
+
+### Native app icon
+
+The source icon is stored at:
+
+```text
+ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+```
+
+Use a square 1024×1024 PNG without transparency. iOS applies the Home Screen corner shape automatically.
+
+## Web app
+
+The web edition is a static site and requires no build step. On iPhone it must be opened in a browser that implements Web Bluetooth; it has been tested with [Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055). Safari does not provide the Web Bluetooth API required by this edition.
+
+### Connect through Bluefy
 
 1. Install Bluefy from the App Store.
 2. Turn on Bluetooth and place the phone near the projector.
-3. Close the BlissLights app on every phone that may still be connected to the projector.
-4. Open the [live app](https://kitchenzky.github.io/skylite-remote/) inside Bluefy.
+3. Fully close the BlissLights app on every nearby phone.
+4. Open the [live web app](https://kitchenzky.github.io/skylite-remote/) inside Bluefy.
 5. Tap the round Bluetooth button.
-6. If the device chooser appears, select **BlissLights**.
-7. Wait for **Connected ✓** before using the controls.
+6. Select **BlissLights** if the chooser appears.
+7. Wait for **Connected ✓**.
 
-The app remembers the authorized device. On later visits it first tries that projector directly; if Bluefy has a stale Bluetooth reference, the chooser opens so the connection can continue.
+The web edition remembers an authorized device when Bluefy permits it. If the stored browser reference is stale, it falls back to the Bluetooth chooser.
 
-### Add it to the Home Screen
-
-Open the live app in Bluefy, use the Share menu, and choose **Add to Home Screen**. The included `manifest.json` and `icon.svg` provide the app name, icon, portrait orientation and dark launch colors.
+Bluefy may suspend JavaScript or disconnect Bluetooth while inactive. The native edition is the solution for reliable background custom animations.
 
 ## Controls
 
@@ -51,93 +119,77 @@ Open the live app in Bluefy, use the Share menu, and choose **Add to Home Screen
 | Sunrise | Built-in sunrise scene |
 | Perfect Blue | Blue nebula and blue laser dots fade against one another while both remain visible |
 | Cosmic Pulse | Magenta nebula with smoothly pulsing laser stars |
-| RGB Pulse | Slowly and smoothly transitions through red, blue and green with rotation enabled |
+| RGB Pulse | Slowly transitions through red, blue and green with rotation enabled |
 | Fading | Built-in fading scene |
 
 Custom animations stop safely when changing presets, tabs, power state or Bluetooth connection.
 
 ### Light Control
 
-Opening **LIGHT CONTROL** switches from the current preset to the remembered custom configuration. The initial configuration is:
+Opening **LIGHT CONTROL** switches from the current preset to the remembered custom configuration. Its initial state is:
 
 - Red, green and blue enabled
 - Laser dots enabled
 - High brightness
 - Rotation ON
 
-Changes are sent as one complete projector state so brightness, colors, laser dots and rotation remain independent.
+Changes are sent as a complete projector state so brightness, colors, laser dots and rotation remain independent.
 
 ## Diagnostic Log
 
-Tap the circled bug icon in the upper-right corner to open diagnostics. The report records connection stages, pairing, power and output commands, lifecycle changes, animation health and projector feedback.
+Tap the circled bug icon in the upper-right corner of the app.
 
-- Tap **COPY** and paste the report into an issue or support conversation.
-- Tap **CLEAR** before reproducing a new, unrelated problem.
-- The history automatically rolls over at 240 events or about 80,000 characters.
+- **Send** opens the native iOS Share Sheet and prepares a `.txt` report for AirDrop or another destination.
+- **COPY** copies the complete report.
+- **CLEAR** immediately removes only diagnostic history; projector settings and the remembered device are preserved.
+- History rolls over at 240 events or approximately 80,000 characters.
 - Passwords, session keys, pairing challenges and hardware identifiers are excluded or redacted.
 
-For a clean bug report: **CLEAR → reproduce the problem once → COPY**.
-
-## Troubleshooting
-
-### The first connection attempt fails
-
-Keep the page visible and tap Connect once. The app tries the remembered projector first and opens the chooser during the same attempt if that reference is stale. If Bluefy or iOS refuses the chooser, tap Connect again and select **BlissLights**.
-
-### `Light rejected pairing (0xe)`
-
-The projector is probably connected to, or was provisioned by, the BlissLights app. Fully close that app on every nearby phone and retry.
-
-If the error persists, a factory reset may be required. Hold the projector's top button until it flashes six times. This removes its existing app pairing and restores the factory mesh credentials, so use it only when necessary.
-
-### The projector is missing from the chooser
-
-- Move the phone closer to the projector.
-- Make sure another phone or app is not connected.
-- Close and reopen Bluefy.
-- Unplug the projector briefly, reconnect power, and try again.
-
-### GitHub Pages shows an older build
-
-Wait about a minute after a push, then reload the page in Bluefy. GitHub Pages provides the HTTPS context required by Web Bluetooth.
+For a clean report: **CLEAR → reproduce the problem once → Send or COPY**.
 
 ## Compatibility and device configuration
 
-This repository is confirmed with one BlissLights Sky Lite 2.0 using the factory Telink mesh credentials. Web Bluetooth does not expose the projector's real hardware MAC address, but the Telink packet encryption requires it. The current app therefore contains the tested projector's MAC in `REAL_MAC`.
+The project is confirmed with one BlissLights Sky Lite 2.0 using factory Telink mesh credentials. Telink packet encryption requires the projector's real hardware MAC address. The configured unit's address is stored as `REAL_MAC` in `index.html` and `skylite.html`.
 
-To use the project with a different Sky Lite unit, determine that unit's real Bluetooth MAC and update `REAL_MAC` in both `index.html` and `skylite.html`. A differently provisioned projector may also need to be returned to its factory mesh credentials.
+To use another Sky Lite unit, determine its real Bluetooth MAC and update `REAL_MAC` in both files. A projector previously provisioned by another app may also need to be returned to its factory mesh credentials.
 
-## Deployment
+## Troubleshooting
 
-The web app is static and needs no build step:
+### `Light rejected pairing (0xe)`
 
-1. Fork or clone the repository.
-2. In GitHub, open **Settings → Pages**.
-3. Choose **Deploy from a branch**.
-4. Select `main` and `/ (root)`.
-5. Open `https://<username>.github.io/<repository>/` after deployment completes.
+The projector is probably connected to, or provisioned by, the BlissLights app. Fully close that app on every nearby phone and retry.
 
-`index.html` is the GitHub Pages entry point. `skylite.html` is an identical standalone copy.
+If the error persists, a factory reset may be required. Hold the projector's top button until it flashes six times. This removes its existing app pairing and restores factory mesh credentials, so use it only when necessary.
 
-## Optional macOS command-line tools
+### The projector is not found
 
-The repository also includes the original Python controller used to inspect and validate the protocol.
+- Move the phone closer to the projector.
+- Make sure another phone or app is not connected.
+- Unplug the projector briefly, reconnect power and retry.
+- In Bluefy, close and reopen the browser before trying again.
 
-Install its dependencies:
+### GitHub Pages shows an older build
+
+Wait about a minute after pushing `main`, then reload the page in Bluefy. Native-branch commits do not trigger the Pages deployment.
+
+## Web deployment
+
+The web app is deployed from `main` and the repository root:
+
+1. Open **Settings → Pages** in GitHub.
+2. Choose **Deploy from a branch**.
+3. Select `main` and `/ (root)`.
+4. Open `https://<username>.github.io/<repository>/` after deployment completes.
+
+`index.html` is the GitHub Pages entry point. `skylite.html` is kept as an identical standalone copy.
+
+## Optional macOS command-line controller
+
+The repository includes the original Python controller used to inspect and validate the protocol:
 
 ```bash
 python3 -m pip install -r requirements.txt
-```
-
-Find the macOS Bluetooth identifier:
-
-```bash
 python3 scan_devices.py
-```
-
-Example commands:
-
-```bash
 python3 control.py <macOS-address> on --mac <real-hardware-mac>
 python3 control.py <macOS-address> off --mac <real-hardware-mac>
 python3 control.py <macOS-address> scenes --mac <real-hardware-mac>
@@ -151,19 +203,26 @@ The optional color arguments are:
 color <red> <green> <blue> [brightness 0-255] [laser 0-255] [motor 0-255]
 ```
 
-## Repository files
+## Repository layout
 
-- `index.html` — deployed mobile web app
-- `skylite.html` — identical standalone copy of the web app
-- `manifest.json` — home-screen/PWA metadata
-- `icon.svg` — local app icon
-- `control.py` — macOS command-line controller
-- `telink_mesh.py` — Telink mesh protocol and cryptography
-- `scan_devices.py` — nearby BLE device scanner
-- `requirements.txt` — Python dependencies
+Files shared by both editions:
 
-## Protocol notes
+- `index.html` — interface and application logic
+- `skylite.html` — identical standalone copy
+- `manifest.json` and `icon.svg` — web home-screen metadata and icon
+- `control.py`, `telink_mesh.py` and `scan_devices.py` — optional Python controller
 
-The projector uses a Telink TLSR8250 BLE mesh. Commands require factory mesh credentials, the real hardware MAC as encryption input, write-without-response on the command characteristic, projector-specific opcodes, the discovered mesh destination and a fresh packet sequence number.
+Additional files on `feature/native-ios`:
 
-The JavaScript and Python implementations perform the Telink login and packet encryption locally. No Bluetooth command or diagnostic report is sent to a remote application server.
+- `ios/App/App.xcodeproj` — native Xcode project
+- `ios/App/App/SkyBluetoothPlugin.swift` — CoreBluetooth and native animation engine
+- `ios/App/App/SkySharePlugin.swift` — diagnostic file sharing
+- `capacitor.config.json` — native shell configuration
+- `scripts/prepare-native.mjs` — prepares local web assets for Capacitor
+- `package.json` — native sync commands and Capacitor dependencies
+
+## Protocol and privacy
+
+The projector uses a Telink TLSR8250 BLE mesh. Commands require mesh login, the real hardware MAC as encryption input, projector-specific opcodes, the discovered mesh destination and fresh packet sequence numbers.
+
+The JavaScript, Swift and Python implementations perform login and encryption locally. No Bluetooth command or diagnostic report is automatically sent to a remote server.

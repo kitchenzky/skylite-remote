@@ -48,7 +48,9 @@
   button:active{transform:scale(.97); filter:brightness(.92);}
   button:disabled{cursor:default;}
   .connect{width:62px; height:62px; padding:0; font-size:0; font-weight:700; border-radius:999px;
-    background:var(--accent); color:var(--accent-ink); margin:0 auto 10px; display:block;
+    background-color:#5C03BC; background-image:linear-gradient(135deg,#5C03BC 0%,#AC8FFA 100%); color:#fff;
+    border:1.5px solid #AC8FFA; overflow:hidden; background-clip:border-box;
+    -webkit-appearance:none; appearance:none; margin:0 auto 10px; display:block;
     align-items:center; justify-content:center; transition:transform .16s ease, opacity .16s ease;}
   .connect:hover{opacity:.95; transform:scale(1.03);}
   .connect svg{width:28px; height:28px; fill:currentColor;}
@@ -59,7 +61,9 @@
     display:inline-flex; align-items:center; justify-content:center; background:var(--panel); color:var(--accent);
     border:1px solid var(--hair);}
   .diagnostics-button{margin-top:1px; color:var(--muted);}
-  .diagnostics-share{background:var(--accent); color:var(--accent-ink); border-color:transparent;}
+  .diagnostics-share{background-color:#5C03BC; background-image:linear-gradient(135deg,#5C03BC 0%,#AC8FFA 100%);
+    color:#fff; border:1.5px solid #AC8FFA; overflow:hidden; background-clip:border-box;
+    -webkit-appearance:none; appearance:none;}
   .diagnostics-button svg,.diagnostics-back svg,.diagnostics-share svg,.diagnostics-copy svg,.diagnostics-clear svg{width:19px; height:19px; fill:none;
     stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
   .diagnostics-back svg{transform:translateX(-1px);}
@@ -79,7 +83,8 @@
     min-width:0; overflow:hidden; white-space:nowrap; background:var(--panel2); color:var(--text); font-weight:700; cursor:pointer; transition:background .16s ease, border-color .16s ease;
   }
   .tab-button.icon-tab{display:flex; align-items:center; justify-content:center; gap:7px;}
-  .tab-button.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .tab-button.active{background-color:#5C03BC; background-image:linear-gradient(135deg,#5C03BC 0%,#AC8FFA 100%);
+    border-color:#AC8FFA; color:#fff;}
   .tab-panels{display:grid; min-width:0;}
   .tab-panel{grid-area:1/1; min-width:0; visibility:hidden; opacity:0; pointer-events:none;}
   .tab-panel.active{visibility:visible; opacity:1; pointer-events:auto;}
@@ -87,7 +92,7 @@
   .power button{flex:1; padding:18px 0; font-size:17px; font-weight:650; border-radius:12px; background:var(--panel2);}
   .power .on{background:var(--accent); color:var(--accent-ink);}
   .power .off{background:var(--panel2); color:var(--text);}
-  .toggle-switch{display:inline-block;position:relative;width:100px;height:50px;--light:rgba(255,255,255,.35);--dark:var(--panel2);}
+  .toggle-switch{display:inline-block;position:relative;width:100px;height:50px;--light:var(--muted);--dark:var(--panel2);}
   .toggle-switch .checkbox{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;z-index:2;}
   .toggle-switch .slider{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:25px;background-color:var(--dark);border:3px solid var(--dark);transition:0.3s;z-index:1;pointer-events:none;}
   .toggle-switch .checkbox:checked + .slider{background-color:var(--light);}
@@ -131,7 +136,8 @@
     width:var(--switch-knob); height:var(--switch-knob); border-radius:50%; background:var(--text);
     transform:translateX(var(--switch-offset)); box-shadow:6px 0 18px rgba(0,0,0,.2);
     transition:width .18s var(--ease-out), transform .24s var(--ease-out), box-shadow .24s var(--ease-out);}
-  .rotation-switch input:checked + .rotation-track{background:var(--accent); box-shadow:none;}
+  .rotation-switch input:checked + .rotation-track{background-color:#5C03BC;
+    background-image:linear-gradient(135deg,#5C03BC 0%,#AC8FFA 100%); box-shadow:none;}
   .rotation-switch input:checked + .rotation-track::after{transform:translateX(calc(var(--switch-width) - var(--switch-knob) - var(--switch-offset)));
     box-shadow:-6px 0 18px rgba(0,0,0,.2);}
   .rotation-switch input:focus-visible + .rotation-track{outline:2px solid var(--accent); outline-offset:3px;}
@@ -415,7 +421,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-27-preset-icons";
+const APP_BUILD="2026-07-22-native-36-gradient-hairlines";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";

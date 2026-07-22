@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Kitchenzky Sky Remote</title>
 <meta name="description" content="Direct Bluetooth control for BlissLights Sky Lite 2.0 -- no app required.">
 <link rel="manifest" href="manifest.json">
@@ -32,6 +32,7 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; width:100%; min-height:100%; overflow-x:hidden; color:var(--text);
     background-color:#060810; font-family:'National Park',-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;}
+  body{touch-action:manipulation;}
   html{background-color:#060810;}
   body{
     padding:max(20px,env(safe-area-inset-top)) 18px 44px; min-height:100vh; max-width:520px; margin:0 auto;
@@ -315,13 +316,13 @@
       <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
       <pre class="diagnostics-log" id="diagnosticsLog" tabindex="0" aria-label="Diagnostic events"></pre>
       <div class="diagnostics-footer">
-        <button class="diagnostics-copy" id="diagnosticsCopy" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-          COPY
-        </button>
         <button class="diagnostics-clear" id="diagnosticsClear" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           CLEAR
+        </button>
+        <button class="diagnostics-copy" id="diagnosticsCopy" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          COPY
         </button>
       </div>
       <div class="diagnostics-toast" id="diagnosticsToast" role="status" aria-live="polite"></div>
@@ -408,7 +409,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-10";
+const APP_BUILD="2026-07-22-native-19-diagnostic-actions";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
@@ -611,25 +612,24 @@ const VENDOR=0x0211;
 const OUTER=0xF0, SUB_ONOFF=0x41, SUB_CONTROL=0x47;
 const DEFAULT_PRESET_ID=1;
 const COSMIC_PULSE_ID=100;
-const PRISM_PULSE_ID=101;
+const RGB_PULSE_ID=101;
 const PERFECT_BLUE_ID=102;
 const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
                [6,"Space"],[8,"Sunrise"],[PERFECT_BLUE_ID,"Perfect Blue"],
-               [COSMIC_PULSE_ID,"Cosmic Pulse"],[PRISM_PULSE_ID,"RGB Pulse"],[2,"Fading"]];
-const SMOOTH_PULSE_STEPS=96;
-const SMOOTH_PULSE_DELAY=85;
-// Perfect Blue previously sent about nine frames per second, while this
-// projector emits 0x47 feedback at only about four per second. Keep
-// the same roughly 12-second fade, but stop flooding its firmware queue.
-const PERFECT_BLUE_STEPS=48;
-const PERFECT_BLUE_DELAY=220;
+               [COSMIC_PULSE_ID,"Cosmic Pulse"],[RGB_PULSE_ID,"RGB Pulse"],[2,"Fading"]];
+// Native animations are paced to the projector's observed feedback rate.
+// Longer cycles keep each accepted 8-bit lighting change visually small.
+const SMOOTH_PULSE_STEPS=64;
+const SMOOTH_PULSE_DELAY=250;
+const PERFECT_BLUE_STEPS=160;
+const PERFECT_BLUE_DELAY=250;
 const COSMIC_LASER_MIN=32;
-const PERFECT_BLUE_COLOR_MIN=64;
+const PERFECT_BLUE_COLOR_MIN=32;
 const PERFECT_BLUE_LASER_MIN=16;
 const PRISM_PULSE_COLORS=[[255,0,0],[0,0,255],[0,255,0]];
-const PRISM_TRANSITION_STEPS=144;
-const PRISM_PULSE_DELAY=100;
-const PRISM_PULSE_FLOOR=.55;
+const PRISM_TRANSITION_STEPS=300;
+const PRISM_HOLD_STEPS=60;
+const PRISM_PULSE_DELAY=1000/30;
 const BT_TIMEOUT={
   GATT_CONNECT:10000,
   DISCOVERY:5000,
@@ -1538,7 +1538,7 @@ function stopPresetEffect(reason="state change",{deferWakeRelease=false,preserve
   if(!deferWakeRelease) releasePresetEffectWakeLock({restoreScreenDim:!preserveScreenDim});
 }
 function isAnimatedPreset(id){
-  return id===COSMIC_PULSE_ID || id===PRISM_PULSE_ID || id===PERFECT_BLUE_ID;
+  return id===COSMIC_PULSE_ID || id===RGB_PULSE_ID || id===PERFECT_BLUE_ID;
 }
 function presetEffectIntentIsCurrent(generation,id){
   return generation===presetEffectGeneration && activeMode===MODE_PRESET && activePresetId===id;
@@ -1552,22 +1552,29 @@ function presetEffectIsCurrent(generation,runMesh,id){
     runMesh?.sessionKey && runMesh.device?.gatt?.connected;
 }
 function prismPulseFrame(index){
-  const phase=Math.floor(index/PRISM_TRANSITION_STEPS)%PRISM_PULSE_COLORS.length;
-  const step=index%PRISM_TRANSITION_STEPS;
+  const segmentSteps=PRISM_HOLD_STEPS+PRISM_TRANSITION_STEPS;
+  const phase=Math.floor(index/segmentSteps)%PRISM_PULSE_COLORS.length;
+  const step=index%segmentSteps;
   const from=PRISM_PULSE_COLORS[phase];
   const to=PRISM_PULSE_COLORS[(phase+1)%PRISM_PULSE_COLORS.length];
-  const t=step/PRISM_TRANSITION_STEPS;
-  const eased=(1-Math.cos(Math.PI*t))/2;
-  const fadeOut=Math.cos(eased*Math.PI/2);
-  const fadeIn=Math.sin(eased*Math.PI/2);
-  const pulseWave=Math.cos(Math.PI*t);
-  const intensity=PRISM_PULSE_FLOOR+(1-PRISM_PULSE_FLOOR)*pulseWave*pulseWave;
-  return [
-    Math.round((from[0]*fadeOut+to[0]*fadeIn)*intensity),
-    Math.round((from[1]*fadeOut+to[1]*fadeIn)*intensity),
-    Math.round((from[2]*fadeOut+to[2]*fadeIn)*intensity),
-    0
-  ];
+  if(step<PRISM_HOLD_STEPS) return [...from,0];
+  const transitionStep=step-PRISM_HOLD_STEPS;
+  const halfSteps=PRISM_TRANSITION_STEPS/2;
+  let fromLevel=1;
+  let toLevel=1;
+  if(transitionStep<halfSteps){
+    const t=transitionStep/(halfSteps-1);
+    // Stack the incoming color over the full-strength current color.
+    // This starts at exactly zero and reaches full strength with no jump.
+    toLevel=(1-Math.cos(Math.PI*t))/2;
+  }else{
+    const t=(transitionStep-halfSteps)/(halfSteps-1);
+    // Once both colors are full, gently remove the outgoing color.
+    fromLevel=(1+Math.cos(Math.PI*t))/2;
+  }
+  return from.map((value,channel)=>Math.round(
+    value*fromLevel+to[channel]*toLevel
+  )).concat(0);
 }
 function smoothPulseWave(index,steps=SMOOTH_PULSE_STEPS){
   const phase=(index%steps)/steps;
@@ -1591,13 +1598,13 @@ function animatedPresetFrame(id,index){
   return prismPulseFrame(index);
 }
 function animatedPresetDelay(id){
-  return id===PRISM_PULSE_ID ? PRISM_PULSE_DELAY
+  return id===RGB_PULSE_ID ? PRISM_PULSE_DELAY
     : id===PERFECT_BLUE_ID ? PERFECT_BLUE_DELAY
     : SMOOTH_PULSE_DELAY;
 }
 function animatedPresetFrameCount(id){
-  return id===PRISM_PULSE_ID
-    ? PRISM_TRANSITION_STEPS*PRISM_PULSE_COLORS.length
+  return id===RGB_PULSE_ID
+    ? (PRISM_HOLD_STEPS+PRISM_TRANSITION_STEPS)*PRISM_PULSE_COLORS.length
     : id===PERFECT_BLUE_ID ? PERFECT_BLUE_STEPS
     : SMOOTH_PULSE_STEPS;
 }

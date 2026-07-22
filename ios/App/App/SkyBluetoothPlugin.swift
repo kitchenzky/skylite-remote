@@ -50,6 +50,9 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
     private var animationMacReversed = Data()
     private var animationDestination = 0xFFFF
     private var animationCycleCount = 0
+    private var animationTimelineStartedAt: TimeInterval = 0
+    private var animationStartFrameIndex = 0
+    private var animationLastAbsoluteFrame = -1
 
     @objc public func getStatus(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
@@ -204,10 +207,13 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
             self.animationMacReversed = macReversed
             self.animationDestination = destination & 0xFFFF
             self.animationCycleCount = 0
+            self.animationTimelineStartedAt = ProcessInfo.processInfo.systemUptime
+            self.animationStartFrameIndex = self.animationFrameIndex
+            self.animationLastAbsoluteFrame = self.animationStartFrameIndex - 1
 
             let interval = self.animationDelay(for: presetID)
             let timer = DispatchSource.makeTimerSource(queue: .main)
-            timer.schedule(deadline: .now() + interval, repeating: interval, leeway: .milliseconds(8))
+            timer.schedule(deadline: .now() + interval, repeating: interval, leeway: .milliseconds(4))
             timer.setEventHandler { [weak self] in self?.sendNextAnimationFrame() }
             self.animationTimer = timer
             timer.resume()
@@ -399,7 +405,24 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
             notifyListeners("nativeLog", data: ["event": "BACKGROUND_ANIMATION_FAILED", "message": "Bluetooth transport unavailable"])
             return
         }
-        let frame = animationFrame(for: presetID, index: animationFrameIndex)
+        let interval = animationDelay(for: presetID)
+        let elapsed = max(0, ProcessInfo.processInfo.systemUptime - animationTimelineStartedAt)
+        // The first native frame follows the initial JavaScript preload by one
+        // interval. Deriving progress from monotonic time prevents a delayed
+        // callback from replaying stale frames or changing the fade duration.
+        let elapsedTicks = max(0, Int(floor((elapsed + 0.002) / interval)) - 1)
+        let absoluteFrame = animationStartFrameIndex + elapsedTicks
+        guard absoluteFrame > animationLastAbsoluteFrame else { return }
+        animationLastAbsoluteFrame = absoluteFrame
+
+        // Do not add another packet to CoreBluetooth's write-without-response
+        // queue when iOS is applying backpressure. The time-based timeline will
+        // naturally select the current blend on the next available tick.
+        guard peripheral.canSendWriteWithoutResponse else { return }
+
+        let frameCount = animationFrameCount(for: presetID)
+        let frameIndex = absoluteFrame % frameCount
+        let frame = animationFrame(for: presetID, index: frameIndex)
         let control = Data([0x47, frame.0, frame.1, frame.2, frame.3, 0xFF, 0x03, 0x00])
         guard let packet = buildTelinkPacket(command: 0xF0, data: control) else {
             stopAnimationEngine(reason: "packet encryption failed")
@@ -407,9 +430,10 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         peripheral.writeValue(packet, for: commandCharacteristic, type: .withoutResponse)
-        animationFrameIndex = (animationFrameIndex + 1) % animationFrameCount(for: presetID)
-        if animationFrameIndex == 0 {
-            animationCycleCount += 1
+        animationFrameIndex = (frameIndex + 1) % frameCount
+        let completedCycles = absoluteFrame / frameCount
+        if completedCycles > animationCycleCount {
+            animationCycleCount = completedCycles
             if animationCycleCount == 1 || animationCycleCount.isMultiple(of: 5) {
                 notifyListeners("nativeLog", data: [
                     "event": "BACKGROUND_ANIMATION_HEARTBEAT",
@@ -421,50 +445,59 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func animationDelay(for presetID: Int) -> TimeInterval {
-        switch presetID {
-        case 101: return 0.100
-        case 102: return 0.220
-        default: return 0.085
-        }
+        presetID == 101 ? (1.0 / 30.0) : 0.250
     }
 
     private func animationFrameCount(for presetID: Int) -> Int {
         switch presetID {
-        case 101: return 432
-        case 102: return 48
-        default: return 96
+        case 101: return 1080
+        case 102: return 160
+        default: return 64
         }
     }
 
     private func animationFrame(for presetID: Int, index: Int) -> (UInt8, UInt8, UInt8, UInt8) {
         if presetID == 100 {
-            let wave = smoothPulse(index: index, steps: 96)
+            let wave = smoothPulse(index: index, steps: 64)
             let laser = UInt8(clamping: Int((32.0 + (255.0 - 32.0) * wave).rounded()))
             return (255, 0, 255, laser)
         }
         if presetID == 102 {
-            let wave = smoothPulse(index: index, steps: 48)
-            let blue = UInt8(clamping: Int((64.0 + (255.0 - 64.0) * wave).rounded()))
+            let wave = smoothPulse(index: index, steps: 160)
+            let blue = UInt8(clamping: Int((32.0 + (255.0 - 32.0) * wave).rounded()))
             let laser = UInt8(clamping: Int((16.0 + (255.0 - 16.0) * (1.0 - wave)).rounded()))
             return (0, 0, blue, laser)
         }
 
         let colors: [(Double, Double, Double)] = [(255, 0, 0), (0, 0, 255), (0, 255, 0)]
-        let transitionSteps = 144
-        let phase = (index / transitionSteps) % colors.count
-        let step = index % transitionSteps
+        let holdSteps = 60
+        let fadeSteps = 300
+        let segmentSteps = holdSteps + fadeSteps
+        let phase = (index / segmentSteps) % colors.count
+        let step = index % segmentSteps
         let from = colors[phase]
         let to = colors[(phase + 1) % colors.count]
-        let t = Double(step) / Double(transitionSteps)
-        let eased = (1.0 - cos(.pi * t)) / 2.0
-        let fadeOut = cos(eased * .pi / 2.0)
-        let fadeIn = sin(eased * .pi / 2.0)
-        let pulseWave = cos(.pi * t)
-        let intensity = 0.55 + (1.0 - 0.55) * pulseWave * pulseWave
+        if step < holdSteps {
+            return (UInt8(from.0), UInt8(from.1), UInt8(from.2), 0)
+        }
+        let transitionStep = step - holdSteps
+        let halfSteps = fadeSteps / 2
+        var fromLevel = 1.0
+        var toLevel = 1.0
+        if transitionStep < halfSteps {
+            let t = Double(transitionStep) / Double(halfSteps - 1)
+            // First stack the incoming color from exactly zero to full while
+            // the current color remains at full strength.
+            toLevel = (1.0 - cos(.pi * t)) / 2.0
+        } else {
+            let t = Double(transitionStep - halfSteps) / Double(halfSteps - 1)
+            // Then keep the new color full while removing the outgoing one.
+            fromLevel = (1.0 + cos(.pi * t)) / 2.0
+        }
         return (
-            UInt8(clamping: Int(((from.0 * fadeOut + to.0 * fadeIn) * intensity).rounded())),
-            UInt8(clamping: Int(((from.1 * fadeOut + to.1 * fadeIn) * intensity).rounded())),
-            UInt8(clamping: Int(((from.2 * fadeOut + to.2 * fadeIn) * intensity).rounded())),
+            UInt8(clamping: Int((from.0 * fromLevel + to.0 * toLevel).rounded())),
+            UInt8(clamping: Int((from.1 * fromLevel + to.1 * toLevel).rounded())),
+            UInt8(clamping: Int((from.2 * fromLevel + to.2 * toLevel).rounded())),
             0
         )
     }

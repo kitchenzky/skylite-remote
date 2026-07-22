@@ -20,7 +20,7 @@ The branches are intentionally separate. GitHub Pages deploys only `main`; nativ
 - Direct Bluetooth Low Energy connection and Telink mesh login
 - Remembers the selected projector
 - Power control and connection-state feedback
-- Ten presets, including three custom animated effects
+- Ten presets, including four custom animated effects
 - Manual red, green, blue and laser-dot selection
 - Low, Medium and High brightness controls
 - Independent rotation control
@@ -38,7 +38,7 @@ The native edition is the recommended version for personal use. It keeps the exi
 - Reconnects automatically to the previously selected projector
 - Does not show a browser Bluetooth chooser on every connection
 - Keeps the Bluetooth session while the app moves to the background
-- Runs Perfect Blue, Cosmic Pulse and RGB Pulse from a native Swift animation engine
+- Runs Perfect Blue, Cosmic Pulse, RGB Pulse and Heartbeat from a native Swift animation engine
 - Shares a complete diagnostic `.txt` report through the iOS Share Sheet, including AirDrop
 - Uses an app icon baked into the installed application
 
@@ -119,10 +119,10 @@ Bluefy may suspend JavaScript or disconnect Bluetooth while inactive. The native
 | Sunrise | Built-in sunrise scene |
 | Perfect Blue | Blue nebula and blue laser dots fade against one another while both remain visible |
 | Cosmic Pulse | Magenta nebula with smoothly pulsing laser stars |
-| RGB Pulse | Slowly transitions through red, blue and green with rotation enabled |
-| Fading | Built-in fading scene |
+| RGB Pulse | Stacks and blends red, blue and green through smooth ten-second transitions, with two-second full-color holds and rotation enabled |
+| Heartbeat | Two red nebula pulses over 1.2 seconds, followed by 2.8 seconds with the red nebula vanished; laser stars and rotation remain on throughout the four-second loop |
 
-Custom animations stop safely when changing presets, tabs, power state or Bluetooth connection.
+Custom animations continue through normal iOS backgrounding and stop safely when changing presets, tabs, power state or Bluetooth connection.
 
 ### Light Control
 

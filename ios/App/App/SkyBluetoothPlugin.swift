@@ -53,6 +53,7 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
     private var animationTimelineStartedAt: TimeInterval = 0
     private var animationStartFrameIndex = 0
     private var animationLastAbsoluteFrame = -1
+    private var animationLastControl = Data()
 
     @objc public func getStatus(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
@@ -188,7 +189,7 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             guard let presetID = call.getInt("presetId"),
-                  [100, 101, 102].contains(presetID),
+                  [2, 100, 101, 102].contains(presetID),
                   let sessionKeyHex = call.getString("sessionKey"),
                   let sessionKey = Data(hexString: sessionKeyHex), sessionKey.count == 16,
                   let macHex = call.getString("macReversed"),
@@ -210,6 +211,7 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
             self.animationTimelineStartedAt = ProcessInfo.processInfo.systemUptime
             self.animationStartFrameIndex = self.animationFrameIndex
             self.animationLastAbsoluteFrame = self.animationStartFrameIndex - 1
+            self.animationLastControl = Data()
 
             let interval = self.animationDelay(for: presetID)
             let timer = DispatchSource.makeTimerSource(queue: .main)
@@ -387,6 +389,7 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
         animationPresetID = nil
         animationSessionKey = Data()
         animationMacReversed = Data()
+        animationLastControl = Data()
         notifyListeners("nativeLog", data: [
             "event": "BACKGROUND_ANIMATION_STOPPED",
             "presetId": stoppedPreset ?? -1,
@@ -424,6 +427,8 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
         let frameIndex = absoluteFrame % frameCount
         let frame = animationFrame(for: presetID, index: frameIndex)
         let control = Data([0x47, frame.0, frame.1, frame.2, frame.3, 0xFF, 0x03, 0x00])
+        guard control != animationLastControl else { return }
+        animationLastControl = control
         guard let packet = buildTelinkPacket(command: 0xF0, data: control) else {
             stopAnimationEngine(reason: "packet encryption failed")
             notifyListeners("nativeLog", data: ["event": "BACKGROUND_ANIMATION_FAILED", "message": "Packet encryption failed"])
@@ -445,11 +450,12 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func animationDelay(for presetID: Int) -> TimeInterval {
-        presetID == 101 ? (1.0 / 30.0) : 0.250
+        (presetID == 2 || presetID == 101) ? (1.0 / 30.0) : 0.250
     }
 
     private func animationFrameCount(for presetID: Int) -> Int {
         switch presetID {
+        case 2: return 120
         case 101: return 1080
         case 102: return 160
         default: return 64
@@ -457,6 +463,41 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func animationFrame(for presetID: Int, index: Int) -> (UInt8, UInt8, UInt8, UInt8) {
+        if presetID == 2 {
+            let firstRiseSteps = 8
+            let firstFallSteps = 8
+            let gapSteps = 4
+            let secondRiseSteps = 8
+            let secondFallSteps = 8
+            let totalSteps = 120
+            var step = index % totalSteps
+            var level = 0.0
+            if step < firstRiseSteps {
+                level = heartbeatEase(step: step, steps: firstRiseSteps, rising: true)
+            } else {
+                step -= firstRiseSteps
+                if step < firstFallSteps {
+                    level = heartbeatEase(step: step, steps: firstFallSteps, rising: false)
+                } else {
+                    step -= firstFallSteps
+                    if step < gapSteps {
+                        level = 0
+                    } else {
+                        step -= gapSteps
+                        if step < secondRiseSteps {
+                            level = 0.82 * heartbeatEase(step: step, steps: secondRiseSteps, rising: true)
+                        } else {
+                            step -= secondRiseSteps
+                            if step < secondFallSteps {
+                                level = 0.82 * heartbeatEase(step: step, steps: secondFallSteps, rising: false)
+                            }
+                        }
+                    }
+                }
+            }
+            let red = UInt8(clamping: Int((255.0 * level).rounded()))
+            return (red, 0, 0, 255)
+        }
         if presetID == 100 {
             let wave = smoothPulse(index: index, steps: 64)
             let laser = UInt8(clamping: Int((32.0 + (255.0 - 32.0) * wave).rounded()))
@@ -505,6 +546,13 @@ public final class SkyBluetoothPlugin: CAPPlugin, CAPBridgedPlugin {
     private func smoothPulse(index: Int, steps: Int) -> Double {
         let phase = Double(index % steps) / Double(steps)
         return (1.0 + cos(2.0 * .pi * phase)) / 2.0
+    }
+
+    private func heartbeatEase(step: Int, steps: Int, rising: Bool) -> Double {
+        let progress = steps <= 1 ? 1.0 : Double(step) / Double(steps - 1)
+        return rising
+            ? (1.0 - cos(.pi * progress)) / 2.0
+            : (1.0 + cos(.pi * progress)) / 2.0
     }
 
     private func buildTelinkPacket(command: UInt8, data: Data) -> Data? {

@@ -409,7 +409,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-19-diagnostic-actions";
+const APP_BUILD="2026-07-22-native-23-heartbeat-4s";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
@@ -614,9 +614,10 @@ const DEFAULT_PRESET_ID=1;
 const COSMIC_PULSE_ID=100;
 const RGB_PULSE_ID=101;
 const PERFECT_BLUE_ID=102;
+const HEARTBEAT_ID=2;
 const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
                [6,"Space"],[8,"Sunrise"],[PERFECT_BLUE_ID,"Perfect Blue"],
-               [COSMIC_PULSE_ID,"Cosmic Pulse"],[RGB_PULSE_ID,"RGB Pulse"],[2,"Fading"]];
+               [COSMIC_PULSE_ID,"Cosmic Pulse"],[RGB_PULSE_ID,"RGB Pulse"],[HEARTBEAT_ID,"Heartbeat"]];
 // Native animations are paced to the projector's observed feedback rate.
 // Longer cycles keep each accepted 8-bit lighting change visually small.
 const SMOOTH_PULSE_STEPS=64;
@@ -630,6 +631,16 @@ const PRISM_PULSE_COLORS=[[255,0,0],[0,0,255],[0,255,0]];
 const PRISM_TRANSITION_STEPS=300;
 const PRISM_HOLD_STEPS=60;
 const PRISM_PULSE_DELAY=1000/30;
+const HEARTBEAT_DELAY=1000/30;
+const HEARTBEAT_FIRST_RISE_STEPS=8;
+const HEARTBEAT_FIRST_FALL_STEPS=8;
+const HEARTBEAT_GAP_STEPS=4;
+const HEARTBEAT_SECOND_RISE_STEPS=8;
+const HEARTBEAT_SECOND_FALL_STEPS=8;
+const HEARTBEAT_REST_STEPS=84;
+const HEARTBEAT_STEPS=HEARTBEAT_FIRST_RISE_STEPS+HEARTBEAT_FIRST_FALL_STEPS+
+  HEARTBEAT_GAP_STEPS+HEARTBEAT_SECOND_RISE_STEPS+HEARTBEAT_SECOND_FALL_STEPS+
+  HEARTBEAT_REST_STEPS;
 const BT_TIMEOUT={
   GATT_CONNECT:10000,
   DISCOVERY:5000,
@@ -1538,7 +1549,7 @@ function stopPresetEffect(reason="state change",{deferWakeRelease=false,preserve
   if(!deferWakeRelease) releasePresetEffectWakeLock({restoreScreenDim:!preserveScreenDim});
 }
 function isAnimatedPreset(id){
-  return id===COSMIC_PULSE_ID || id===RGB_PULSE_ID || id===PERFECT_BLUE_ID;
+  return id===COSMIC_PULSE_ID || id===RGB_PULSE_ID || id===PERFECT_BLUE_ID || id===HEARTBEAT_ID;
 }
 function presetEffectIntentIsCurrent(generation,id){
   return generation===presetEffectGeneration && activeMode===MODE_PRESET && activePresetId===id;
@@ -1590,20 +1601,43 @@ function perfectBlueFrame(index){
   const laser=Math.round(PERFECT_BLUE_LASER_MIN+(255-PERFECT_BLUE_LASER_MIN)*(1-wave));
   return [0,0,blue,laser];
 }
+function heartbeatEase(step,steps,rising){
+  const t=steps<=1?1:step/(steps-1);
+  return rising?(1-Math.cos(Math.PI*t))/2:(1+Math.cos(Math.PI*t))/2;
+}
+function heartbeatFrame(index){
+  let step=index%HEARTBEAT_STEPS;
+  let level=0;
+  if(step<HEARTBEAT_FIRST_RISE_STEPS){
+    level=heartbeatEase(step,HEARTBEAT_FIRST_RISE_STEPS,true);
+  }else if((step-=HEARTBEAT_FIRST_RISE_STEPS)<HEARTBEAT_FIRST_FALL_STEPS){
+    level=heartbeatEase(step,HEARTBEAT_FIRST_FALL_STEPS,false);
+  }else if((step-=HEARTBEAT_FIRST_FALL_STEPS)<HEARTBEAT_GAP_STEPS){
+    level=0;
+  }else if((step-=HEARTBEAT_GAP_STEPS)<HEARTBEAT_SECOND_RISE_STEPS){
+    level=.82*heartbeatEase(step,HEARTBEAT_SECOND_RISE_STEPS,true);
+  }else if((step-=HEARTBEAT_SECOND_RISE_STEPS)<HEARTBEAT_SECOND_FALL_STEPS){
+    level=.82*heartbeatEase(step,HEARTBEAT_SECOND_FALL_STEPS,false);
+  }
+  return [Math.round(255*level),0,0,255];
+}
 function animatedPresetFrame(id,index){
   if(id===COSMIC_PULSE_ID){
     return [255,0,255,cosmicPulseLaser(index)];
   }
   if(id===PERFECT_BLUE_ID) return perfectBlueFrame(index);
+  if(id===HEARTBEAT_ID) return heartbeatFrame(index);
   return prismPulseFrame(index);
 }
 function animatedPresetDelay(id){
-  return id===RGB_PULSE_ID ? PRISM_PULSE_DELAY
+  return id===HEARTBEAT_ID ? HEARTBEAT_DELAY
+    : id===RGB_PULSE_ID ? PRISM_PULSE_DELAY
     : id===PERFECT_BLUE_ID ? PERFECT_BLUE_DELAY
     : SMOOTH_PULSE_DELAY;
 }
 function animatedPresetFrameCount(id){
-  return id===RGB_PULSE_ID
+  return id===HEARTBEAT_ID ? HEARTBEAT_STEPS
+    : id===RGB_PULSE_ID
     ? (PRISM_HOLD_STEPS+PRISM_TRANSITION_STEPS)*PRISM_PULSE_COLORS.length
     : id===PERFECT_BLUE_ID ? PERFECT_BLUE_STEPS
     : SMOOTH_PULSE_STEPS;

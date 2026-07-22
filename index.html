@@ -42,6 +42,8 @@
   .app-title{min-width:0;}
   h1{font-size:26px; font-weight:700; margin:4px 0 2px; letter-spacing:-.02em;}
   .sub{color:var(--muted); font-size:14px; font-weight:700; margin-bottom:22px;}
+  .app-credit{color:var(--muted); font-size:14px; font-weight:700; line-height:1.4; text-align:center;
+    margin:20px auto 0;}
   button{font-family:inherit; cursor:pointer; border:none; color:var(--text);
     transition:transform .14s var(--ease-out), filter .14s var(--ease-out), opacity .14s var(--ease-out);}
   button:active{transform:scale(.97); filter:brightness(.92);}
@@ -142,8 +144,11 @@
   .rotation-state:first-child{text-align:right;}
   .rotation-state:last-child{text-align:left;}
   .rotation-state.active{color:var(--accent);}
-  .color-label{display:flex; min-width:0; align-items:center; gap:8px;}
-  .color-dot{width:12px; height:12px; border-radius:50%; flex-shrink:0;}
+  .color-label{display:flex; min-width:0; align-items:center; gap:8px; overflow:hidden;}
+  #colorChips .color-dot,#colorChips .color-icon{width:17px; height:17px; flex:0 0 17px;}
+  .color-dot{border-radius:50%;}
+  #colorChips .color-icon{fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+  #colorChips .color-name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .color-dot.red{background:#FF2F00;}
   .color-dot.green{background:#98FA00;}
   .color-dot.blue{background:#2F55FF;}
@@ -215,6 +220,7 @@
     #presets .preset-option{gap:6px;}
     #presets .preset-icon{width:15px; height:15px; flex-basis:15px;}
     .color-label{gap:6px;}
+    #colorChips .color-dot,#colorChips .color-icon{width:15px; height:15px; flex-basis:15px;}
     .diagnostics-view{padding-top:max(16px,env(safe-area-inset-top));
       padding-right:max(12px,env(safe-area-inset-right)); padding-bottom:36px;
       padding-left:max(12px,env(safe-area-inset-left));}
@@ -273,10 +279,10 @@
         <div class="group">
           <h3 class="section-label"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>Colors</h3>
           <div class="grid" id="colorChips">
-            <button data-ch="r"><span class="color-label"><span class="color-dot red"></span>Red</span><span class="check">✓</span></button>
-            <button data-ch="g"><span class="color-label"><span class="color-dot green"></span>Green</span><span class="check">✓</span></button>
-            <button data-ch="b"><span class="color-label"><span class="color-dot blue"></span>Blue</span><span class="check">✓</span></button>
-            <button data-ch="laser"><span class="color-label"><svg class="heading-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/></svg>Laser dots</span><span class="check">✓</span></button>
+            <button data-ch="r"><span class="color-label"><span class="color-dot red"></span><span class="color-name">Red</span></span><span class="check">✓</span></button>
+            <button data-ch="g"><span class="color-label"><span class="color-dot green"></span><span class="color-name">Green</span></span><span class="check">✓</span></button>
+            <button data-ch="b"><span class="color-label"><span class="color-dot blue"></span><span class="color-name">Blue</span></span><span class="check">✓</span></button>
+            <button data-ch="laser"><span class="color-label"><svg class="color-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/></svg><span class="color-name">Laser dots</span></span><span class="check">✓</span></button>
           </div>
         </div>
         <div class="group">
@@ -298,6 +304,7 @@
       </div>
     </div>
   </div>
+  <div class="app-credit">© App by Kitchenzky</div>
   </main>
 
   <section class="diagnostics-view" id="diagnosticsView" role="dialog" aria-modal="true" aria-labelledby="diagnosticsTitle" hidden>
@@ -411,7 +418,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-web-brand-label-weight";
+const APP_BUILD="2026-07-23-web-color-alignment-credit";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";

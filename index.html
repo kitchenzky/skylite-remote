@@ -99,6 +99,10 @@
     text-align:left; border:1.5px solid var(--hair);}
   .grid button>span:first-child{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   #presets button,#colorChips button,#brightnessOptions button{border-radius:999px;}
+  #presets .preset-option{display:flex; align-items:center; gap:8px; min-width:0; overflow:hidden;}
+  #presets .preset-icon{width:17px; height:17px; flex:0 0 17px; fill:none; stroke:currentColor;
+    stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+  #presets .preset-name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .grid button.active{border-color:var(--accent);}
   .grid button .check{opacity:0; color:var(--accent); font-weight:800; font-size:16px; flex-shrink:0;
     transform:scale(.8); transition:opacity .16s var(--ease-out), transform .16s var(--ease-out);}
@@ -208,6 +212,8 @@
     .grid{gap:7px;}
     .grid button{padding:12px 10px; font-size:12px; gap:6px;}
     .grid button .check{font-size:14px;}
+    #presets .preset-option{gap:6px;}
+    #presets .preset-icon{width:15px; height:15px; flex-basis:15px;}
     .color-label{gap:6px;}
     .diagnostics-view{padding-top:max(16px,env(safe-area-inset-top));
       padding-right:max(12px,env(safe-area-inset-right)); padding-bottom:36px;
@@ -409,7 +415,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-native-23-heartbeat-4s";
+const APP_BUILD="2026-07-22-native-25-preset-icons";
 const NATIVE_SKY_BLUETOOTH=window.Capacitor?.Plugins?.SkyBluetooth||null;
 const NATIVE_SKY_SHARE=window.Capacitor?.Plugins?.SkyShare||null;
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
@@ -618,6 +624,26 @@ const HEARTBEAT_ID=2;
 const PRESETS=[[1,"Nebula + Stars"],[4,"Nebula"],[3,"Stars"],[5,"Ocean"],
                [6,"Space"],[8,"Sunrise"],[PERFECT_BLUE_ID,"Perfect Blue"],
                [COSMIC_PULSE_ID,"Cosmic Pulse"],[RGB_PULSE_ID,"RGB Pulse"],[HEARTBEAT_ID,"Heartbeat"]];
+const PRESET_ICON_PATHS=Object.freeze({
+  orbit:'<path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"/><path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/>',
+  eclipse:'<circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 1 0 10 10"/>',
+  sparkles:'<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>',
+  waves:'<path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/>',
+  telescope:'<path d="m10.065 12.493-6.18 1.318a.934.934 0 0 1-1.108-.702l-.537-2.15a1.07 1.07 0 0 1 .691-1.265l13.504-4.44"/><path d="m13.56 11.747 4.332-.924"/><path d="m16 21-3.105-6.21"/><path d="M16.485 5.94a2 2 0 0 1 1.455-2.425l1.09-.272a1 1 0 0 1 1.212.727l1.515 6.06a1 1 0 0 1-.727 1.213l-1.09.272a2 2 0 0 1-2.425-1.455z"/><path d="m6.158 8.633 1.114 4.456"/><path d="m8 21 3.105-6.21"/><circle cx="12" cy="13" r="2"/>',
+  sunrise:'<path d="M12 2v8"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m8 6 4-4 4 4"/><path d="M16 18a4 4 0 0 0-8 0"/>',
+  satellite:'<path d="M4 10a7.31 7.31 0 0 0 10 10Z"/><path d="m9 15 3-3"/><path d="M17 13a6 6 0 0 0-6-6"/><path d="M21 13A10 10 0 0 0 11 3"/>',
+  rainbow:'<path d="M22 17a10 10 0 0 0-20 0"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M10 17a2 2 0 0 1 4 0"/>',
+  activity:'<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>'
+});
+const PRESET_ICON_NAMES=Object.freeze({
+  1:"orbit",4:"satellite",3:"sparkles",5:"waves",6:"telescope",8:"sunrise",
+  [PERFECT_BLUE_ID]:"eclipse",[COSMIC_PULSE_ID]:"satellite",
+  [RGB_PULSE_ID]:"rainbow",[HEARTBEAT_ID]:"activity"
+});
+function presetIconSvg(id){
+  const paths=PRESET_ICON_PATHS[PRESET_ICON_NAMES[id]]||"";
+  return `<svg class="preset-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths}</svg>`;
+}
 // Native animations are paced to the projector's observed feedback rate.
 // Longer cycles keep each accepted 8-bit lighting change visually small.
 const SMOOTH_PULSE_STEPS=64;
@@ -2480,7 +2506,7 @@ PRESETS.forEach(([id,label])=>{
   b.type="button";
   b.dataset.presetId = id;
   b.setAttribute("aria-pressed","false");
-  b.innerHTML=`<span>${label}</span><span class="check" aria-hidden="true">✓</span>`;
+  b.innerHTML=`<span class="preset-option">${presetIconSvg(id)}<span class="preset-name">${label}</span></span><span class="check" aria-hidden="true">✓</span>`;
   b.onclick=()=> selectPreset(id,true,"preset button");
   $("presets").appendChild(b);
 });

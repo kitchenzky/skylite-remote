@@ -50,8 +50,10 @@
     background-color:#5C03BC; background-image:linear-gradient(135deg,#5C03BC 0%,#AC8FFA 100%); color:#fff;
     border:1.5px solid #AC8FFA; overflow:hidden; background-clip:border-box;
     -webkit-appearance:none; appearance:none; margin:0 auto 10px; display:block;
-    align-items:center; justify-content:center; transition:transform .16s ease, opacity .16s ease;}
-  .connect:hover{opacity:.95; transform:scale(1.03);}
+    align-items:center; justify-content:center; transition:transform .16s var(--ease-out), opacity .16s var(--ease-out);}
+  @media (hover:hover) and (pointer:fine){
+    .connect:hover{opacity:.95; transform:scale(1.03);}
+  }
   .connect svg{width:28px; height:28px; fill:currentColor;}
   .status{font-size:13px; font-weight:700; color:var(--muted); text-align:center; min-height:18px; margin-bottom:20px;}
   .status.on{color:var(--accent);}
@@ -80,7 +82,8 @@
   .tab-button.active{background-color:#5C03BC; background-image:linear-gradient(135deg,#5C03BC 0%,#AC8FFA 100%);
     border-color:#AC8FFA; color:#fff;}
   .tab-panels{display:grid; min-width:0;}
-  .tab-panel{grid-area:1/1; min-width:0; visibility:hidden; opacity:0; pointer-events:none;}
+  .tab-panel{grid-area:1/1; min-width:0; visibility:hidden; opacity:0; pointer-events:none;
+    transition:opacity .15s var(--ease-out);}
   .tab-panel.active{visibility:visible; opacity:1; pointer-events:auto;}
   .power{display:flex; justify-content:center; align-items:center; gap:10px;}
   .power button{flex:1; padding:18px 0; font-size:17px; font-weight:650; border-radius:12px; background:var(--panel2);}
@@ -88,9 +91,9 @@
   .power .off{background:var(--panel2); color:var(--text);}
   .toggle-switch{display:inline-block;position:relative;width:100px;height:50px;--light:var(--muted);--dark:var(--panel2);}
   .toggle-switch .checkbox{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;z-index:2;}
-  .toggle-switch .slider{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:25px;background-color:var(--dark);border:3px solid var(--dark);transition:0.3s;z-index:1;pointer-events:none;}
+  .toggle-switch .slider{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:25px;background-color:var(--dark);border:3px solid var(--dark);transition:background-color .2s var(--ease-out);z-index:1;pointer-events:none;}
   .toggle-switch .checkbox:checked + .slider{background-color:var(--light);}
-  .toggle-switch .slider::before{content:"";position:absolute;top:50%;left:10px;width:25px;height:25px;border-radius:50%;box-shadow:inset 12px -4px 0px 0px var(--light);background-color:var(--dark);transform:translateY(-50%);transition:0.3s;}
+  .toggle-switch .slider::before{content:"";position:absolute;top:50%;left:10px;width:25px;height:25px;border-radius:50%;box-shadow:inset 12px -4px 0px 0px var(--light);background-color:var(--dark);transform:translateY(-50%);transition:transform .2s var(--ease-out);}
   .toggle-switch .checkbox:checked + .slider::before{transform:translate(50px,-50%);box-shadow:none;}
   .grid{display:grid; min-width:0; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px;}
   .grid button{display:flex; align-items:center; justify-content:space-between; gap:8px;
@@ -171,7 +174,10 @@
   .diagnostics-view[hidden]{display:none;}
   .diagnostics-view{position:fixed; inset:0; z-index:100; width:100%; max-width:520px; height:100vh; height:100dvh;
     margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 18px 44px;
-    background:var(--bg); display:flex; flex-direction:column; overflow:hidden;}
+    background:var(--bg); display:flex; flex-direction:column; overflow:hidden;
+    opacity:1; transform:scale(1); transition:opacity .2s var(--ease-out), transform .2s var(--ease-out);}
+  .diagnostics-view.closing{opacity:0; transform:scale(.97); transition-duration:.15s;}
+  .diagnostics-view.opening{opacity:0; transform:scale(.97);}
   .diagnostics-shell{width:100%; min-height:0; flex:1; margin:0 auto;
     display:flex; flex-direction:column; gap:12px;}
   .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:10px;}
@@ -201,6 +207,7 @@
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
     button:active{transform:none;}
+    .diagnostics-view,.diagnostics-view.closing,.diagnostics-view.opening{transform:none; transition:opacity .14s var(--ease-out);}
   }
   @media (max-width:390px){
     body{padding-top:max(16px,env(safe-area-inset-top)); padding-right:max(12px,env(safe-area-inset-right));
@@ -411,7 +418,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-web-brand-label-weight";
+const APP_BUILD="2026-07-22-web-animation-polish";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -2474,7 +2481,11 @@ function buildDiagnosticReport(){
 }
 function openDiagnostics(){
   diagnosticLog("DIAG","VIEW_OPEN",currentDiagnosticSnapshot());
-  $("diagnosticsView").hidden=false;
+  const view=$("diagnosticsView");
+  view.classList.remove("closing");
+  view.classList.add("opening");
+  view.hidden=false;
+  requestAnimationFrame(()=>view.classList.remove("opening"));
   document.body.classList.add("diagnostics-open");
   $("mainApp").inert=true;
   $("mainApp").setAttribute("aria-hidden","true");
@@ -2486,7 +2497,11 @@ function openDiagnostics(){
 }
 function closeDiagnostics(){
   diagnosticLog("DIAG","VIEW_CLOSE");
-  $("diagnosticsView").hidden=true;
+  const view=$("diagnosticsView");
+  view.classList.add("closing");
+  view.addEventListener("transitionend",()=>{
+    if(view.classList.contains("closing")){ view.hidden=true; view.classList.remove("closing"); }
+  },{once:true});
   document.body.classList.remove("diagnostics-open");
   $("mainApp").inert=false;
   $("mainApp").removeAttribute("aria-hidden");

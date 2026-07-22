@@ -1,4 +1,4 @@
-# Kitchenzky Sky Remote
+# KitchenSky Remote
 
 A personal mobile remote for a BlissLights Sky Lite 2.0 projector. The project now has two editions: a native iPhone app using CoreBluetooth and a mobile Web Bluetooth version hosted on GitHub Pages.
 

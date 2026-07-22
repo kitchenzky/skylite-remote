@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kitchenzky Sky Remote</title>
+<title>KitchenSky Remote</title>
 <meta name="description" content="Direct Bluetooth control for BlissLights Sky Lite 2.0 -- no app required.">
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +13,7 @@
 <!-- iOS home-screen / PWA-like launch (Bluefy: open URL, Add to Home Screen) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Kitchenzky Sky Remote">
+<meta name="apple-mobile-web-app-title" content="KitchenSky Remote">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
@@ -41,7 +41,7 @@
   .app-header{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
   .app-title{min-width:0;}
   h1{font-size:26px; font-weight:700; margin:4px 0 2px; letter-spacing:-.02em;}
-  .sub{color:var(--muted); font-size:14px; margin-bottom:22px;}
+  .sub{color:var(--muted); font-size:14px; font-weight:700; margin-bottom:22px;}
   button{font-family:inherit; cursor:pointer; border:none; color:var(--text);
     transition:transform .14s var(--ease-out), filter .14s var(--ease-out), opacity .14s var(--ease-out);}
   button:active{transform:scale(.97); filter:brightness(.92);}
@@ -53,7 +53,7 @@
     align-items:center; justify-content:center; transition:transform .16s ease, opacity .16s ease;}
   .connect:hover{opacity:.95; transform:scale(1.03);}
   .connect svg{width:28px; height:28px; fill:currentColor;}
-  .status{font-size:13px; color:var(--muted); text-align:center; min-height:18px; margin-bottom:20px;}
+  .status{font-size:13px; font-weight:700; color:var(--muted); text-align:center; min-height:18px; margin-bottom:20px;}
   .status.on{color:var(--accent);}
   .status.err{color:var(--err);}
   .diagnostics-button,.diagnostics-back{width:44px; height:44px; flex:0 0 44px; padding:0; border-radius:50%;
@@ -179,7 +179,7 @@
   .diagnostics-title h2{font-size:18px; line-height:1.1; margin:0 0 3px; display:flex; align-items:center; gap:8px; color:var(--text);}
   .diagnostics-title h2 svg{width:19px; height:19px; flex:0 0 19px; fill:none; stroke:currentColor;
     stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
-  .diagnostics-title p{font-size:12px; color:var(--muted); margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .diagnostics-title p{font-size:12px; font-weight:700; color:var(--muted); margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .diagnostics-copy,.diagnostics-clear{width:96px; height:44px; min-height:44px; max-height:44px;
     flex:0 0 96px; padding:0 12px; border-radius:999px; display:inline-flex; align-items:center;
     justify-content:center; gap:7px; font-size:12px; font-weight:700;}
@@ -194,9 +194,9 @@
     font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
     white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; -webkit-user-select:text;}
   .diagnostics-footer{display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:44px;}
-  .diagnostics-note{min-width:0; color:var(--muted); font-size:12px; line-height:1.35;}
+  .diagnostics-note{width:100%; min-width:0; color:var(--muted); font-size:12px; line-height:1.35; text-align:center;}
   .diagnostics-clear{background:var(--panel); color:var(--err); border:1px solid var(--hair);}
-  .diagnostics-toast{min-height:15px; color:var(--accent); font-size:11px; text-align:right;}
+  .diagnostics-toast{min-height:15px; color:var(--accent); font-size:11px; font-weight:700; text-align:right;}
   @media (prefers-reduced-motion:reduce){
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
@@ -231,7 +231,7 @@
   <main id="mainApp">
   <div class="app-header">
     <div class="app-title">
-      <h1>Kitchenzky Sky Remote</h1>
+      <h1>KitchenSky Remote</h1>
       <div class="sub">Let there be light!</div>
     </div>
     <button class="diagnostics-button" id="diagnosticsButton" type="button" aria-label="Open diagnostic logs" aria-controls="diagnosticsView" aria-expanded="false">
@@ -319,9 +319,9 @@
         </button>
       </div>
       <div class="diagnostics-summary" id="diagnosticsSummary"></div>
+      <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
       <pre class="diagnostics-log" id="diagnosticsLog" tabindex="0" aria-label="Diagnostic events"></pre>
       <div class="diagnostics-footer">
-        <div class="diagnostics-note">Rolling history only. Animation frames, passwords and keys are excluded.</div>
         <button class="diagnostics-clear" id="diagnosticsClear" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           CLEAR
@@ -411,7 +411,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-22-web-gradient-hairlines";
+const APP_BUILD="2026-07-22-web-brand-label-weight";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";
@@ -546,7 +546,10 @@ function renderDiagnosticEntries(forceBottom=false){
   const output=document.getElementById("diagnosticsLog");
   const count=document.getElementById("diagnosticsCount");
   const view=document.getElementById("diagnosticsView");
-  if(count) count.textContent=diagnosticEntries.length+" saved event"+(diagnosticEntries.length===1?"":"s")+" · "+diagnosticPersistenceState;
+  if(count){
+    const persistenceLabel=diagnosticPersistenceState.charAt(0).toUpperCase()+diagnosticPersistenceState.slice(1);
+    count.textContent=diagnosticEntries.length+" saved event"+(diagnosticEntries.length===1?"":"s")+" · "+persistenceLabel;
+  }
   if(!forceBottom&&view?.hidden) return;
   if(!output) return;
   const nearBottom=output.scrollHeight-output.scrollTop-output.clientHeight<70;
@@ -2456,7 +2459,7 @@ function updateDiagnosticSummary(){
 function buildDiagnosticReport(){
   const state=currentDiagnosticSnapshot();
   return [
-    "Kitchenzky Sky Remote — Diagnostic Report",
+    "KitchenSky Remote — Diagnostic Report",
     "Build: "+APP_BUILD,
     "Exported: "+new Date().toISOString(),
     "Session: "+diagnosticSessionId,

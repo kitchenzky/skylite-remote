@@ -37,7 +37,53 @@
     padding:max(20px,env(safe-area-inset-top)) 18px 44px; min-height:100vh; max-width:520px; margin:0 auto;
     background-color:#060810; position:relative;
   }
+  body>.starfield{position:fixed; inset:0; z-index:0; max-width:520px; margin:0 auto; overflow:hidden;
+    pointer-events:none; background:transparent;}
+  body>.starfield~:not(.diagnostics-view){position:relative; z-index:1;}
+  .star-layer{position:absolute; inset:0; background-repeat:repeat; will-change:background-position,opacity;}
+  .stars-far{
+    opacity:.54;
+    background-image:
+      radial-gradient(circle,#2C2740 0 1px,transparent 1.6px),
+      radial-gradient(circle,#2C2740 0 1px,transparent 1.6px),
+      radial-gradient(circle,#2C2740 0 1px,transparent 1.6px),
+      radial-gradient(circle,#2C2740 0 1px,transparent 1.6px);
+    background-size:63px 79px,97px 119px,137px 151px,181px 167px;
+    background-position:11px 17px,53px 79px,101px 31px,149px 113px;
+    animation:starsFarDrift 20s linear infinite,starsFarBlink 5.8s ease-in-out infinite alternate;}
+  .stars-mid{
+    opacity:.7;
+    background-image:
+      radial-gradient(circle,#2C2740 0 1.4px,transparent 2px),
+      radial-gradient(circle,#2C2740 0 1.2px,transparent 1.9px),
+      radial-gradient(circle,#2C2740 0 1.4px,transparent 2px),
+      radial-gradient(circle,#2C2740 0 1.2px,transparent 1.9px);
+    background-size:103px 127px,139px 167px,181px 149px,223px 211px;
+    background-position:29px 61px,117px 19px,73px 143px,191px 89px;
+    animation:starsMidDrift 13s linear infinite,starsMidBlink 4.4s ease-in-out -1.7s infinite alternate;}
+  .stars-near{
+    opacity:.82;
+    background-image:
+      radial-gradient(circle,#2C2740 0 1.9px,transparent 2.7px),
+      radial-gradient(circle,#2C2740 0 1.7px,transparent 2.5px),
+      radial-gradient(circle,#2C2740 0 1.8px,transparent 2.6px);
+    background-size:157px 191px,211px 197px,269px 239px;
+    background-position:41px 97px,179px 23px,127px 173px;
+    animation:starsNearDrift 8.5s linear infinite,starsNearBlink 3.2s ease-in-out -.8s infinite alternate;}
+  @keyframes starsFarDrift{
+    from{background-position:11px 17px,53px 79px,101px 31px,149px 113px;}
+    to{background-position:11px -62px,53px -40px,101px -120px,149px -54px;}}
+  @keyframes starsMidDrift{
+    from{background-position:29px 61px,117px 19px,73px 143px,191px 89px;}
+    to{background-position:29px -66px,117px -148px,73px -6px,191px -122px;}}
+  @keyframes starsNearDrift{
+    from{background-position:41px 97px,179px 23px,127px 173px;}
+    to{background-position:41px -94px,179px -174px,127px -66px;}}
+  @keyframes starsFarBlink{0%,35%{opacity:.3;} 70%,100%{opacity:.58;}}
+  @keyframes starsMidBlink{0%,28%{opacity:.38;} 68%,100%{opacity:.76;}}
+  @keyframes starsNearBlink{0%,24%{opacity:.42;} 62%,100%{opacity:.88;}}
   body.diagnostics-open{overflow:hidden;}
+  body.diagnostics-open>#mainApp{display:none;}
   .app-header{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
   .app-title{min-width:0;}
   h1{font-size:26px; font-weight:700; margin:4px 0 2px; letter-spacing:-.02em;}
@@ -176,7 +222,7 @@
   .diagnostics-view[hidden]{display:none;}
   .diagnostics-view{position:fixed; inset:0; z-index:100; width:100%; max-width:520px; height:100vh; height:100dvh;
     margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 18px 44px;
-    background:var(--bg); display:flex; flex-direction:column; overflow:hidden;}
+    background:transparent; display:flex; flex-direction:column; overflow:hidden;}
   .diagnostics-shell{width:100%; min-height:0; flex:1; margin:0 auto;
     display:flex; flex-direction:column; gap:12px;}
   .diagnostics-header{display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:10px;}
@@ -203,6 +249,10 @@
   .diagnostics-clear{background:var(--panel); color:var(--err); border:1px solid var(--hair);}
   .diagnostics-toast{min-height:15px; color:var(--accent); font-size:11px; font-weight:700; text-align:right;}
   @media (prefers-reduced-motion:reduce){
+    .star-layer{animation:none;}
+    .stars-far{opacity:.42;}
+    .stars-mid{opacity:.56;}
+    .stars-near{opacity:.68;}
     .grid button{animation:none;}
     button{transition:opacity .14s var(--ease-out);}
     button:active{transform:none;}
@@ -234,6 +284,11 @@
 </style>
 </head>
 <body>
+  <div class="starfield" aria-hidden="true">
+    <div class="star-layer stars-far"></div>
+    <div class="star-layer stars-mid"></div>
+    <div class="star-layer stars-near"></div>
+  </div>
   <main id="mainApp">
   <div class="app-header">
     <div class="app-title">
@@ -418,7 +473,7 @@ function withTimeout(promise,timeoutMs,stage){
 }
 
 /* ============================ Persistent diagnostics ============================ */
-const APP_BUILD="2026-07-23-web-color-alignment-credit";
+const APP_BUILD="2026-07-23-web-starfield";
 const DIAGNOSTIC_STORAGE_KEY="skylite-diagnostic-log-v1";
 const DIAGNOSTIC_ACTIVE_KEY="skylite-diagnostic-active-session";
 const DIAGNOSTIC_TEST_KEY="skylite-diagnostic-storage-test";

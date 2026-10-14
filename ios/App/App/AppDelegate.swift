@@ -46,4 +46,47 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
+
+}
+
+// iOS 27 terminates apps that don't adopt the UIScene lifecycle.
+// The window comes from Main.storyboard via UISceneStoryboardFile in Info.plist.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+
+    var window: UIWindow?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        if let urlContext = connectionOptions.urlContexts.first {
+            openURL(urlContext)
+        }
+        if let userActivity = connectionOptions.userActivities.first {
+            continueActivity(userActivity)
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        if let urlContext = URLContexts.first {
+            openURL(urlContext)
+        }
+    }
+
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        continueActivity(userActivity)
+    }
+
+    private func openURL(_ urlContext: UIOpenURLContext) {
+        var options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+        options[.sourceApplication] = urlContext.options.sourceApplication
+        options[.annotation] = urlContext.options.annotation
+        options[.openInPlace] = urlContext.options.openInPlace
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: urlContext.url, options: options)
+    }
+
+    private func continueActivity(_ userActivity: NSUserActivity) {
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
+    }
+
 }
